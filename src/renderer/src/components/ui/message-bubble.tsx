@@ -1,5 +1,5 @@
 import { Check, CheckCheck } from 'lucide-react'
-import type { Message } from '../App.tsx'
+import type { Message } from '../../App.tsx'
 import { ReactElement } from 'react'
 
 interface MessageBubbleProps {

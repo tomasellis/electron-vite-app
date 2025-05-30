@@ -3,8 +3,9 @@ import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Badge } from '../components/ui/badge'
-import type { Chat } from '../App.tsx'
 import { ReactElement } from 'react'
+
+type Chat = any
 
 interface ChatListProps {
   chats: Chat[]

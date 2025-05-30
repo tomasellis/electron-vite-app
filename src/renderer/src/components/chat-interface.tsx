@@ -1,16 +1,14 @@
-'use client'
-
-import type React from 'react'
-
 import { ReactElement, useState } from 'react'
 import { Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, Menu } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { MessageBubble } from './message-bubble'
-import type { Chat, Message } from '../App.tsx'
+import { MessageBubble } from './ui/message-bubble'
 
-interface ChatInterfaceProps {
+type Chat = any
+type Message = any
+
+type ChatInterfaceProps = {
   chat: Chat
   messages: Message[]
   onMenuClick: () => void
@@ -98,7 +96,7 @@ export function ChatInterface({ chat, messages, onMenuClick }: ChatInterfaceProp
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyUp={handleKeyPress}
               placeholder="Type a message..."
               className="pr-12"
             />
