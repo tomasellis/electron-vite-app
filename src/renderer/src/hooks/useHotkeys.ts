@@ -9,25 +9,32 @@ type HotkeyAction = {
   action: () => void
 }
 
+const isModifierMatch = (want?: boolean, actual?: boolean): boolean =>
+  want === undefined || want === actual
+
+const doesEventMatchHotkey = (e: KeyboardEvent, h: HotkeyAction): boolean => {
+  return (
+    e.key.toLowerCase() === h.key.toLowerCase() &&
+    isModifierMatch(h.ctrl, e.ctrlKey) &&
+    isModifierMatch(h.shift, e.shiftKey) &&
+    isModifierMatch(h.alt, e.altKey) &&
+    isModifierMatch(h.meta, e.metaKey)
+  )
+}
+
 export function useHotkeys(hotkeys: HotkeyAction[]): void {
   useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      hotkeys.forEach((h) => {
-        const match =
-          e.key.toLowerCase() === h.key.toLowerCase() &&
-          !!h.ctrl === e.ctrlKey &&
-          !!h.shift === e.shiftKey &&
-          !!h.alt === e.altKey &&
-          !!h.meta === e.metaKey
-
-        if (match) {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      for (const h of hotkeys) {
+        if (doesEventMatchHotkey(e, h)) {
           e.preventDefault()
           h.action()
+          break
         }
-      })
+      }
     }
 
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [hotkeys])
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { ReactElement, useState } from 'react'
 import {
   Search,
   Plus,
@@ -25,9 +25,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from './components/ui/dropdown-menu'
+import { useHotkeys } from './hooks/usehotkeys'
 
-export default function ChatInterface() {
-  const [selectedChat, setSelectedChat] = useState(null)
+export default function ChatInterface(): ReactElement {
+  const [selectedChat, setSelectedChat] = useState<(typeof chats)[0] | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
   const [inboxFilter, setInboxFilter] = useState('all')
 
@@ -123,7 +124,7 @@ export default function ChatInterface() {
   ]
 
   // Filter chats based on active filter
-  const filteredChats = chats.filter((chat) => {
+  const filteredChats: (typeof chats)[0][] = chats.filter((chat) => {
     if (activeFilter === 'unreads') return chat.isUnread
     if (activeFilter === 'silenced') return chat.isSilenced
 
@@ -139,6 +140,43 @@ export default function ChatInterface() {
 
     return true
   })
+
+  useHotkeys([
+    {
+      key: 'j',
+      ctrl: true,
+      meta: false,
+      action: () => {
+        if (!selectedChat) {
+          setSelectedChat(filteredChats[0])
+          return
+        }
+
+        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+
+        if (currentIndex === filteredChats.length - 1) return setSelectedChat(filteredChats[0])
+
+        setSelectedChat(filteredChats[currentIndex + 1])
+      }
+    },
+    {
+      key: 'k',
+      ctrl: true,
+      meta: false,
+      action: () => {
+        if (!selectedChat) {
+          setSelectedChat(filteredChats[filteredChats.length - 1])
+          return
+        }
+
+        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+
+        if (currentIndex === 0) return setSelectedChat(filteredChats[filteredChats.length - 1])
+
+        setSelectedChat(filteredChats[currentIndex - 1])
+      }
+    }
+  ])
 
   return (
     <div className="flex h-screen bg-[#1a2330] text-white overflow-hidden">
@@ -275,7 +313,7 @@ export default function ChatInterface() {
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
           {filteredChats.length > 0 ? (
-            filteredChats.map((chat) => (
+            filteredChats.map((chat, idx) => (
               <ChatItem
                 key={chat.id}
                 chat={chat}
@@ -306,6 +344,8 @@ export default function ChatInterface() {
           )}
         </div>
       </div>
+
+      <div>qr</div>
 
       {/* Right Panel - Chat or Shortcuts */}
       <div className="flex-1 bg-[#1a2330] flex flex-col">
@@ -550,11 +590,11 @@ function ShortcutsView() {
   )
 }
 
-function ShortcutSection({ children }) {
+function ShortcutSection({ children }): ReactElement {
   return <div className="space-y-3">{children}</div>
 }
 
-function ShortcutItem({ label, shortcut }) {
+function ShortcutItem({ label, shortcut }): ReactElement {
   return (
     <div className="flex items-center justify-between py-2">
       <span className="text-gray-300">{label}</span>
