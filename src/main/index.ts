@@ -2,11 +2,11 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import path, { join } from 'path'
 import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { DisconnectReason, makeWASocket, useMultiFileAuthState } from 'baileys'
+import { DisconnectReason, makeWASocket, useMultiFileAuthState, WASocket } from 'baileys'
 import QRCode from 'qrcode'
 
-let win
-let sock
+let win: BrowserWindow
+let sock: null | WASocket
 
 function createWindow(): void {
   win = new BrowserWindow({
@@ -20,6 +20,7 @@ function createWindow(): void {
       contextIsolation: true
     }
   })
+
   win.loadURL('http://localhost:5173')
 
   win.on('ready-to-show', () => {

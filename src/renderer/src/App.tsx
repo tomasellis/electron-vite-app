@@ -23,6 +23,7 @@ import { useHotkeys } from './hooks/usehotkeys'
 import ChatView from './components/chat-view'
 import ShortcutsView from './components/shortcuts-view'
 import ChatItem from './components/chat-item'
+import { Chat } from './types'
 
 export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
@@ -31,10 +32,10 @@ export default function ChatInterface(): ReactElement {
   const [number, setNumber] = useState('')
   const [message, setMessage] = useState('')
 
-  const [selectedChat, setSelectedChat] = useState<(typeof chats)[0] | null>(null)
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
   const [inboxFilter, setInboxFilter] = useState('all')
-  const [chats, setChats] = useState<any[]>([
+  const [chats, setChats] = useState<Chat[]>([
     {
       id: 1,
       name: 'Matías Carpintini',
@@ -108,6 +109,17 @@ export default function ChatInterface(): ReactElement {
     }
   }
 
+  // Add this function to handle chat selection
+  const handleChatSelect = (chat: typeof chats[0]) => {
+    setSelectedChat(chat)
+    // Update the chat's read status
+    setChats(prevChats =>
+      prevChats.map(c =>
+        c.id === chat.id ? { ...c, isUnread: false } : c
+      )
+    )
+  }
+
   useHotkeys([
     {
       key: 'j',
@@ -115,15 +127,15 @@ export default function ChatInterface(): ReactElement {
       meta: false,
       action: () => {
         if (!selectedChat) {
-          setSelectedChat(filteredChats[0])
+          handleChatSelect(filteredChats[0])
           return
         }
 
         const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
 
-        if (currentIndex === filteredChats.length - 1) return setSelectedChat(filteredChats[0])
+        if (currentIndex === filteredChats.length - 1) return handleChatSelect(filteredChats[0])
 
-        setSelectedChat(filteredChats[currentIndex + 1])
+        handleChatSelect(filteredChats[currentIndex + 1])
       }
     },
     {
@@ -132,15 +144,37 @@ export default function ChatInterface(): ReactElement {
       meta: false,
       action: () => {
         if (!selectedChat) {
-          setSelectedChat(filteredChats[filteredChats.length - 1])
+          handleChatSelect(filteredChats[filteredChats.length - 1])
           return
         }
 
         const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
 
-        if (currentIndex === 0) return setSelectedChat(filteredChats[filteredChats.length - 1])
+        if (currentIndex === 0) return handleChatSelect(filteredChats[filteredChats.length - 1])
 
-        setSelectedChat(filteredChats[currentIndex - 1])
+        handleChatSelect(filteredChats[currentIndex - 1])
+      }
+    },
+    {
+      key: 't',
+      ctrl: true,
+      meta: false,
+      action: () => {
+        if (!selectedChat) return
+
+        setChats(prevChats =>
+          prevChats.map(chat =>
+            chat.id === selectedChat.id ? { ...chat, isUnread: true } : chat
+          )
+        )
+      }
+    },
+    {
+      key: 'b',
+      ctrl: true,
+      meta: false,
+      action: () => {
+        setSelectedChat(null)
       }
     }
   ])
@@ -314,7 +348,7 @@ export default function ChatInterface(): ReactElement {
                 key={chat.id}
                 chat={chat}
                 isSelected={selectedChat?.id === chat.id}
-                onClick={() => setSelectedChat(chat)}
+                onClick={() => handleChatSelect(chat)}
               />
             ))
           ) : (
