@@ -1,4 +1,4 @@
-import { ReactElement, useState } from 'react'
+import { ReactElement, useEffect, useState } from 'react'
 import {
   Search,
   Plus,
@@ -8,17 +8,10 @@ import {
   Users,
   MessageSquare,
   Settings,
-  Send,
-  Paperclip,
-  Smile,
   Check,
-  Bell,
   BellOff
 } from 'lucide-react'
 import { Badge } from './components/ui/badge'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip'
-import { Input } from './components/ui/input'
-import { Button } from './components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,12 +20,21 @@ import {
 } from './components/ui/dropdown-menu'
 import { useHotkeys } from './hooks/usehotkeys'
 
+import ChatView from './components/chat-view'
+import ShortcutsView from './components/shortcuts-view'
+import ChatItem from './components/chat-item'
+
 export default function ChatInterface(): ReactElement {
+  const [qr, setQR] = useState<string | null>(null)
+  const [qrImg, setQrImg] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+  const [number, setNumber] = useState('')
+  const [message, setMessage] = useState('')
+
   const [selectedChat, setSelectedChat] = useState<(typeof chats)[0] | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
   const [inboxFilter, setInboxFilter] = useState('all')
-
-  const chats = [
+  const [chats, setChats] = useState<any[]>([
     {
       id: 1,
       name: 'Matías Carpintini',
@@ -41,7 +43,7 @@ export default function ChatInterface(): ReactElement {
       avatar: '/placeholder.svg?height=40&width=40',
       isTyping: true,
       isUnread: true,
-      isSilenced: false,
+      isSilenced: true,
       tag: 'Personal'
     },
     {
@@ -52,7 +54,7 @@ export default function ChatInterface(): ReactElement {
       avatar: '/placeholder.svg?height=40&width=40',
       tag: 'Kungfu',
       isActive: true,
-      isUnread: true,
+      isUnread: false,
       isSilenced: false
     },
     {
@@ -66,62 +68,8 @@ export default function ChatInterface(): ReactElement {
       isRead: true,
       isUnread: false,
       isSilenced: false
-    },
-    {
-      id: 4,
-      name: 'Michael Scott',
-      message: '1:05',
-      time: '16:26',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Friends',
-      hasVoiceMessage: true,
-      isRead: true,
-      isUnread: false,
-      isSilenced: false
-    },
-    {
-      id: 5,
-      name: 'César López',
-      message: 'Reacted 👍 to: "yo esta semana voy a estar c...',
-      time: '16:15',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Kungfu',
-      isActive: true,
-      isUnread: true,
-      isSilenced: false
-    },
-    {
-      id: 6,
-      name: 'random',
-      message: 'Matías: mamita jaja',
-      time: '15:41',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Office',
-      isUnread: false,
-      isSilenced: true
-    },
-    {
-      id: 7,
-      name: 'office',
-      message: 'Matías reacted 😂 to: mañana Matías Carpintini...',
-      time: '15:35',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Office',
-      isUnread: false,
-      isSilenced: false
-    },
-    {
-      id: 8,
-      name: 'Instructores Vicente Lopez',
-      message: 'Alina: Listo, le confirme para el 18 de mayo.',
-      time: '12:48',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Kungfu',
-      isActive: true,
-      isUnread: false,
-      isSilenced: true
     }
-  ]
+  ])
 
   // Filter chats based on active filter
   const filteredChats: (typeof chats)[0][] = chats.filter((chat) => {
@@ -140,6 +88,25 @@ export default function ChatInterface(): ReactElement {
 
     return true
   })
+
+  useEffect(() => {
+    window.electronAPI.onQR(async (code) => {
+      console.log('got qr', { code })
+      setQR(code)
+      console.log('got dataUrl', { code })
+      setQrImg(code)
+    })
+    window.electronAPI.onReady(() => {
+      setQR(null)
+      setReady(true)
+    })
+  }, [])
+
+  function send() {
+    if (number && message) {
+      window.electronAPI.sendMessage({ number, message })
+    }
+  }
 
   useHotkeys([
     {
@@ -177,6 +144,35 @@ export default function ChatInterface(): ReactElement {
       }
     }
   ])
+
+  // if (!ready && qr) {
+  //   console.log('QR>>>>>', qr)
+  //   return (
+  //     <div style={{ padding: 20 }}>
+  //       <h2>scan me :^)</h2>
+  //       <img src={qrImg} alt="qr code" width={256} height={256} />
+  //     </div>
+  //   )
+  // }
+  //
+  // return (
+  //   <div style={{ padding: 20 }}>
+  //     <h2>yo you re in</h2>
+  //     <input
+  //       placeholder="number"
+  //       value={number}
+  //       onChange={(e) => setNumber(e.target.value)}
+  //       style={{ marginBottom: 10, display: 'block', width: '100%' }}
+  //     />
+  //     <textarea
+  //       placeholder="message"
+  //       value={message}
+  //       onChange={(e) => setMessage(e.target.value)}
+  //       style={{ marginBottom: 10, display: 'block', width: '100%' }}
+  //     />
+  //     <button onClick={send}>send it 📨</button>
+  //   </div>
+  // )
 
   return (
     <div className="flex h-screen bg-[#1a2330] text-white overflow-hidden">
@@ -313,7 +309,7 @@ export default function ChatInterface(): ReactElement {
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
           {filteredChats.length > 0 ? (
-            filteredChats.map((chat, idx) => (
+            filteredChats.map((chat) => (
               <ChatItem
                 key={chat.id}
                 chat={chat}
@@ -345,8 +341,6 @@ export default function ChatInterface(): ReactElement {
         </div>
       </div>
 
-      <div>qr</div>
-
       {/* Right Panel - Chat or Shortcuts */}
       <div className="flex-1 bg-[#1a2330] flex flex-col">
         {selectedChat ? (
@@ -355,261 +349,6 @@ export default function ChatInterface(): ReactElement {
           <ShortcutsView />
         )}
       </div>
-    </div>
-  )
-}
-
-function ChatItem({ chat, isSelected, onClick }) {
-  return (
-    <div
-      className={`flex items-center p-4 hover:bg-gray-800 cursor-pointer border-b border-gray-800 ${
-        isSelected ? 'bg-gray-800' : ''
-      } ${chat.isUnread ? 'bg-opacity-50 bg-gray-900' : ''}`}
-      onClick={onClick}
-    >
-      <div className="relative mr-3">
-        <img
-          src={chat.avatar || '/placeholder.svg'}
-          alt={chat.name}
-          width={40}
-          height={40}
-          className="rounded-full"
-        />
-        {chat.isActive && (
-          <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#0f8a6d] rounded-full border-2 border-[#1a2330]"></div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className={`font-medium truncate ${chat.isUnread ? 'font-semibold' : ''}`}>
-              {chat.name}
-            </span>
-            {chat.tag && (
-              <Badge
-                className={`
-                text-xs px-2
-                ${chat.tag === 'Kungfu' ? 'bg-green-600' : ''}
-                ${chat.tag === 'Friends' ? 'bg-green-600' : ''}
-                ${chat.tag === 'Office' ? 'bg-blue-600' : ''}
-                ${chat.tag === 'Personal' ? 'bg-purple-600' : ''}
-              `}
-              >
-                {chat.tag}
-              </Badge>
-            )}
-            {chat.isSilenced && <BellOff className="h-3 w-3 text-gray-400" />}
-          </div>
-          <span className="text-xs text-gray-400">{chat.time}</span>
-        </div>
-        <div className="flex items-center">
-          {chat.hasVoiceMessage && <span className="text-gray-400 mr-1">✓</span>}
-          <p className={`text-sm truncate ${chat.isTyping ? 'text-[#0f8a6d]' : 'text-gray-400'}`}>
-            {chat.message}
-          </p>
-          {chat.isTyping && <div className="ml-1 w-2 h-2 rounded-full bg-[#0f8a6d]"></div>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ChatView({ chat, onClose }) {
-  return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <div className="flex items-center space-x-3">
-          <img
-            src={chat.avatar || '/placeholder.svg'}
-            alt={chat.name}
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-          <div>
-            <div className="flex items-center space-x-2">
-              <h2 className="font-semibold">{chat.name}</h2>
-              {chat.tag && (
-                <Badge
-                  className={`
-                  text-xs px-2
-                  ${chat.tag === 'Kungfu' ? 'bg-green-600' : ''}
-                  ${chat.tag === 'Friends' ? 'bg-green-600' : ''}
-                  ${chat.tag === 'Office' ? 'bg-blue-600' : ''}
-                  ${chat.tag === 'Personal' ? 'bg-purple-600' : ''}
-                `}
-                >
-                  {chat.tag}
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-gray-400">Active now</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {chat.isSilenced ? (
-            <Button variant="ghost" size="icon">
-              <BellOff className="h-5 w-5" />
-            </Button>
-          ) : (
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4">
-          <div className="flex justify-start">
-            <div className="bg-gray-700 rounded-lg p-3 max-w-xs">
-              <p className="text-sm">Hey! How are you doing?</p>
-              <span className="text-xs text-gray-400 mt-1 block">2:30 PM</span>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <div className="bg-[#0f8a6d] rounded-lg p-3 max-w-xs">
-              <p className="text-sm">I'm doing great! Thanks for asking.</p>
-              <span className="text-xs text-gray-300 mt-1 block">2:32 PM</span>
-            </div>
-          </div>
-          <div className="flex justify-start">
-            <div className="bg-gray-700 rounded-lg p-3 max-w-xs">
-              <p className="text-sm">That's awesome! Want to catch up later?</p>
-              <span className="text-xs text-gray-400 mt-1 block">2:35 PM</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Message Input */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Input placeholder="Type a message..." className="flex-1 bg-gray-800 border-gray-700" />
-          <Button variant="ghost" size="sm">
-            <Smile className="h-4 w-4" />
-          </Button>
-          <Button size="sm" className="bg-[#0f8a6d] hover:bg-[#0d7a5e]">
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ShortcutsView() {
-  return (
-    <div className="p-6 overflow-y-auto">
-      <div className="max-w-2xl mx-auto">
-        <h2 className="text-3xl font-bold mb-8">Chat</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Navigation</h3>
-            <ShortcutSection>
-              <ShortcutItem label="Next Chat" shortcut="↓" />
-              <ShortcutItem label="Previous Chat" shortcut="↑" />
-              <ShortcutItem label="Open Chat" shortcut="O" />
-              <ShortcutItem label="Close Chat" shortcut="Esc" />
-              <ShortcutItem label="Find" shortcut="⌘ F" />
-              <ShortcutItem label="Search in Chat" shortcut="⌘ K" />
-            </ShortcutSection>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Actions</h3>
-            <ShortcutSection>
-              <ShortcutItem label="Done Chat" shortcut="E" />
-              <ShortcutItem label="Send Message & Done Chat" shortcut="⌘ Enter" />
-              <ShortcutItem label="Mark as Unread" shortcut="U" />
-              <ShortcutItem label="Remind Me" shortcut="R" />
-              <ShortcutItem label="Archive Chat" shortcut="A" />
-              <ShortcutItem label="Delete Chat" shortcut="⌘ D" />
-            </ShortcutSection>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Lists</h3>
-            <ShortcutSection>
-              <ShortcutItem label="Switch between Inbox" shortcut="Tab" />
-              <ShortcutItem label="Move to List" shortcut="⌘ [1-9]" />
-              <ShortcutItem label="Go to All" shortcut="⌘ A" />
-              <ShortcutItem label="Place Chat in List" shortcut="⌘ P" />
-              <ShortcutItem label="Place in Silenced" shortcut="⌘ Shift P" />
-              <ShortcutItem label="Create New List" shortcut="⌘ N" />
-            </ShortcutSection>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Messaging</h3>
-            <ShortcutSection>
-              <ShortcutItem label="New Message" shortcut="⌘ M" />
-              <ShortcutItem label="Reply" shortcut="⌘ R" />
-              <ShortcutItem label="Forward" shortcut="⌘ Shift F" />
-              <ShortcutItem label="Add Emoji" shortcut="⌘ E" />
-              <ShortcutItem label="Attach File" shortcut="⌘ Shift A" />
-              <ShortcutItem label="Voice Message" shortcut="⌘ Shift V" />
-            </ShortcutSection>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">View</h3>
-            <ShortcutSection>
-              <ShortcutItem label="Toggle Sidebar" shortcut="⌘ \\" />
-              <ShortcutItem label="Zoom In" shortcut="⌘ +" />
-              <ShortcutItem label="Zoom Out" shortcut="⌘ -" />
-              <ShortcutItem label="Reset Zoom" shortcut="⌘ 0" />
-              <ShortcutItem label="Full Screen" shortcut="⌘ Ctrl F" />
-              <ShortcutItem label="Dark Mode" shortcut="⌘ Shift D" />
-            </ShortcutSection>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Send Later</h3>
-            <ShortcutSection>
-              <ShortcutItem label="Schedule Message" shortcut="⌘ Shift S" />
-              <ShortcutItem label="Send in 1 Hour" shortcut="⌘ 1" />
-              <ShortcutItem label="Send Tomorrow" shortcut="⌘ T" />
-              <ShortcutItem label="Send Next Week" shortcut="⌘ W" />
-              <ShortcutItem label="Custom Schedule" shortcut="⌘ Shift C" />
-              <ShortcutItem label="View Scheduled" shortcut="⌘ Shift V" />
-            </ShortcutSection>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ShortcutSection({ children }): ReactElement {
-  return <div className="space-y-3">{children}</div>
-}
-
-function ShortcutItem({ label, shortcut }): ReactElement {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-gray-300">{label}</span>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger>
-            <kbd className="px-3 py-1 bg-gray-700 rounded text-xs font-mono border border-gray-600">
-              {shortcut}
-            </kbd>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Keyboard shortcut</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
     </div>
   )
 }
