@@ -18,12 +18,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from './components/ui/dropdown-menu'
-import { useHotkeys } from './hooks/usehotkeys'
+import { useHotkeys } from './hooks/useHotkeys'
+import CommandBar from './components/command-bar'
 
 import ChatView from './components/chat-view'
 import ShortcutsView from './components/shortcuts-view'
 import ChatItem from './components/chat-item'
 import { Chat } from './types'
+import { COMMANDS } from './commands'
 
 export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
@@ -31,6 +33,7 @@ export default function ChatInterface(): ReactElement {
   const [ready, setReady] = useState(false)
   const [number, setNumber] = useState('')
   const [message, setMessage] = useState('')
+  const [isCommandBarOpen, setIsCommandBarOpen] = useState(false)
 
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
@@ -170,14 +173,36 @@ export default function ChatInterface(): ReactElement {
       }
     },
     {
-      key: 'b',
-      ctrl: true,
+      key: 'escape',
+      ctrl: false,
       meta: false,
       action: () => {
         setSelectedChat(null)
       }
+    },
+    {
+      key: ':',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        setIsCommandBarOpen(true)
+      }
     }
   ])
+
+  const handleCommand = (command: string) => {
+    const [cmd, ...args] = command.split(' ')
+    const commandObj = COMMANDS.find(c => c.name.toLowerCase() === cmd.toLowerCase())
+
+    if (commandObj) {
+      commandObj.execute(args, {
+        selectedChat,
+        filteredChats,
+        handleChatSelect,
+        setActiveFilter
+      })
+    }
+  }
 
   // if (!ready && qr) {
   //   console.log('QR>>>>>', qr)
@@ -383,6 +408,13 @@ export default function ChatInterface(): ReactElement {
           <ShortcutsView />
         )}
       </div>
+
+      {/* Command Bar */}
+      <CommandBar
+        isOpen={isCommandBarOpen}
+        onClose={() => setIsCommandBarOpen(false)}
+        onExecute={handleCommand}
+      />
     </div>
   )
 }
