@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react'
-import { Message, ChatState } from '../types'
+import { IncomingMessage, ChatState } from '../types'
 import { Chat, Contact } from 'baileys'
 
 type ChatAction =
@@ -11,9 +11,9 @@ type ChatAction =
     | { type: 'ADD_CHAT'; payload: Chat }
     | { type: 'UPDATE_CHAT'; payload: Chat }
     | { type: 'DELETE_CHAT'; payload: string }
-    | { type: 'SET_MESSAGES'; payload: { chatId: string; messages: Message[] } }
-    | { type: 'ADD_MESSAGE'; payload: { chatId: string; message: Message } }
-    | { type: 'UPDATE_MESSAGE'; payload: { chatId: string; messageId: string; updates: Partial<Message> } }
+    | { type: 'SET_MESSAGES'; payload: { chatId: string; messages: IncomingMessage[] } }
+    | { type: 'ADD_MESSAGE'; payload: { chatId: string; message: IncomingMessage } }
+    | { type: 'UPDATE_MESSAGE'; payload: { chatId: string; messageId: string; updates: Partial<IncomingMessage> } }
     | { type: 'SET_ACTIVE_CHAT'; payload: string | null }
 
 const initialState: ChatState = {

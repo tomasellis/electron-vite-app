@@ -1,4 +1,4 @@
-import { ReactElement } from 'react'
+import { ReactElement, useState } from 'react'
 import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User, X } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -10,9 +10,49 @@ interface ChatViewProps {
   chat: Chat
   messages: IncomingMessage[]
   onClose: () => void
+  onNewMessage: (message: IncomingMessage) => void
 }
 
-export default function ChatView({ chat, messages, onClose }: ChatViewProps): ReactElement {
+export default function ChatView({ chat, messages, onClose, onNewMessage }: ChatViewProps): ReactElement {
+  const [message, setMessage] = useState('')
+
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      // Create a temporary message with pending status
+      const tempMessage: IncomingMessage = {
+        key: {
+          remoteJid: chat.id,
+          fromMe: true,
+          id: `temp-${Date.now()}`
+        },
+        message: {
+          conversation: message.trim()
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 0 // PENDING
+      }
+
+      // Add to local state immediately
+      onNewMessage(tempMessage)
+
+      console.log('Sending message:', {
+        to: chat.id,
+        message: message.trim(),
+        chatName: chat.name,
+        chatDetails: chat
+      })
+      window.electronAPI.sendMessage({ jid: chat.id, message: message.trim() })
+      setMessage('')
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
@@ -48,11 +88,21 @@ export default function ChatView({ chat, messages, onClose }: ChatViewProps): Re
           {/* <Button variant="ghost" size="sm"> */}
           {/*   <Paperclip className="h-4 w-4" /> */}
           {/* </Button> */}
-          <Input placeholder="Type a message..." className="flex-1 bg-gray-800 border-gray-700" />
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyUp={handleKeyPress}
+            placeholder="Type a message..."
+            className="flex-1 bg-gray-800 border-gray-700"
+          />
           {/* <Button variant="ghost" size="sm"> */}
           {/*   <Smile className="h-4 w-4" /> */}
           {/* </Button> */}
-          <Button size="sm" className="bg-[#0f8a6d] hover:bg-[#0d7a5e]">
+          <Button
+            onClick={handleSendMessage}
+            size="sm"
+            className="bg-[#0f8a6d] hover:bg-[#0d7a5e]"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>

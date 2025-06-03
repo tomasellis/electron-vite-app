@@ -189,12 +189,28 @@ async function initBaileys() {
   })
 }
 
-ipcMain.on('send-message', async (event, { number, message }) => {
+ipcMain.on('send-message', async (event, { jid, message }) => {
   if (!sock) {
     console.log('no socket')
     return
   }
 
-  const jid = number + '@s.whatsapp.net'
-  await sock.sendMessage(jid, { text: message })
+  if (!jid || !message) {
+    console.error('Invalid message data:', { jid, message })
+    return
+  }
+
+  // Ensure JID is in correct format
+  const fullJid = jid.includes('@') ? jid : `${jid}@s.whatsapp.net`
+
+  console.log('Sending message via Baileys:', {
+    to: fullJid,
+    message
+  })
+
+  try {
+    await sock.sendMessage(fullJid, { text: message })
+  } catch (error) {
+    console.error('Error sending message:', error)
+  }
 })

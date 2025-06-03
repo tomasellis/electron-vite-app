@@ -12,6 +12,6 @@ export interface ElectronAPI {
   onSyncData: (callback: (data: { chats: Chat[]; contacts: Contact[]; messages: Record<string, IncomingMessage[]> }) => void) => void
   onNewMessages: (callback: (messages: Record<string, IncomingMessage[]>) => void) => void
   reloadSync: () => void
-  sendMessage: (data: { number: string; message: string }) => void
+  sendMessage: (data: { jid: string; message: string }) => void
 }
 

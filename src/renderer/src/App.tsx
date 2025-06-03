@@ -464,6 +464,17 @@ export default function ChatInterface(): ReactElement {
                 chat={selectedChat}
                 messages={messages[selectedChat.id] || []}
                 onClose={() => setSelectedChat(null)}
+                onNewMessage={(message) => {
+                  setMessages(prevMessages => {
+                    const updatedMessages = { ...prevMessages }
+                    if (!updatedMessages[selectedChat.id]) {
+                      updatedMessages[selectedChat.id] = []
+                    }
+                    // Add new message at the beginning since we're using flex-col-reverse
+                    updatedMessages[selectedChat.id] = [message, ...updatedMessages[selectedChat.id]]
+                    return updatedMessages
+                  })
+                }}
               />
             ) : (
               <ShortcutsView />
