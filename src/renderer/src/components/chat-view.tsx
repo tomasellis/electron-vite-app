@@ -31,10 +31,14 @@ export default function ChatView({ chat, messages, onClose }: ChatViewProps): Re
         </button>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <MessageBubble key={index} message={message} />
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse">
+        {messages.map((message) => (
+          <MessageBubble
+            key={`${message.key.id}-${message.key.remoteJid}`}
+            message={message}
+            isOwn={message.key.fromMe ?? false}
+          />
         ))}
       </div>
 

@@ -90,7 +90,7 @@ async function initBaileys() {
     if (connection === 'open') {
       win.webContents.send('ready')
 
-      // Load test data
+      /* // Load test data
       const testData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../testdata/sync-3.json'), 'utf-8'))
       const messagesByChat: Record<string, any[]> = {}
 
@@ -105,7 +105,7 @@ async function initBaileys() {
         }
       })
 
-      /* win.webContents.send('sync-data', {
+      win.webContents.send('sync-data', {
         chats: testData.chats,
         contacts: testData.contacts,
         messages: messagesByChat
@@ -132,15 +132,15 @@ async function initBaileys() {
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
     console.log({ chats, contacts, messages, syncType })
 
-    // Load test data
-    const testData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../testdata/sync-3.json'), 'utf-8'))
+    // Filter out chats without names
+    const validChats = chats.filter(chat => chat.name)
     const messagesByChat: Record<string, any[]> = {}
 
-    testData.chats.forEach(chat => {
+    validChats.forEach(chat => {
       messagesByChat[chat.id] = []
     })
 
-    testData.messages.forEach(msg => {
+    messages.forEach(msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
         messagesByChat[chatId].push(msg)
@@ -148,21 +148,38 @@ async function initBaileys() {
     })
 
     win.webContents.send('sync-data', {
-      chats: testData.chats,
-      contacts: testData.contacts,
+      chats: validChats,
+      contacts,
       messages: messagesByChat
     })
   })
 
   sock.ev.on('messages.upsert', ({ type, messages }) => {
-    if (type == 'notify') {
-      // new messages
-      for (const message of messages) {
-        // messages is an array, do not just handle the first message, you will miss messages
-        console.log('new message', { message })
-      }
-    } else {
-      console.log('old upserrt: ', { type, messages })
+    if (type === 'notify') {
+      console.log('\n\n')
+      console.log('MESSAGES UPSERT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+      console.log({ type, messages })
+
+      // Organize new messages by chat
+      const messagesByChat: Record<string, any[]> = {}
+
+      messages.forEach(msg => {
+        const chatId = msg.key.remoteJid
+        if (chatId) {
+          // Create array for this chat if it doesn't exist
+          if (!messagesByChat[chatId]) {
+            messagesByChat[chatId] = []
+          }
+          // Add message to its specific chat array
+          messagesByChat[chatId].push(msg)
+        }
+      })
+
+      console.log('\n\n\n')
+      console.log('updated messages to send and orderred', { messages })
+
+      // Send only the new messages to renderer
+      win.webContents.send('new-messages', messagesByChat)
     }
   })
 

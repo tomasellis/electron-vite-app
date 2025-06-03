@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSyncData: (callback: (data: { chats: Chat[], contacts: Contact[], messages: Record<string, IncomingMessage[]> }) => void) => {
     ipcRenderer.on('sync-data', (_event, data) => callback(data))
   },
+  onNewMessages: (callback: (messages: Record<string, IncomingMessage[]>) => void) => {
+    ipcRenderer.on('new-messages', (_event, messages) => callback(messages))
+  },
   reloadSync: () => {
     ipcRenderer.send('reload-sync')
   },
