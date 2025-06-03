@@ -97,6 +97,20 @@ async function initBaileys() {
       const cachedMessages = storage.loadMessages()
 
       if (cachedChats.length > 0 || cachedContacts.length > 0) {
+        console.log('\nSending cached data to renderer:')
+        Object.entries(cachedMessages).forEach(([chatId, msgs]) => {
+          console.log(`\nMessages for chat ${chatId}:`)
+          msgs.forEach(msg => {
+            console.log('Message timestamp:', {
+              raw: msg.messageTimestamp,
+              type: typeof msg.messageTimestamp,
+              parsed: typeof msg.messageTimestamp === 'number'
+                ? new Date(msg.messageTimestamp * 1000).toISOString()
+                : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
+            })
+          })
+        })
+
         win.webContents.send('sync-data', {
           chats: cachedChats,
           contacts: cachedContacts,
@@ -140,9 +154,23 @@ async function initBaileys() {
       }
     })
 
-    /* storage.saveChats(validChats)
+    console.log('\nSending history data to renderer:')
+    Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
+      console.log(`\nMessages for chat ${chatId}:`)
+      msgs.forEach(msg => {
+        console.log('Message timestamp:', {
+          raw: msg.messageTimestamp,
+          type: typeof msg.messageTimestamp,
+          parsed: typeof msg.messageTimestamp === 'number'
+            ? new Date(msg.messageTimestamp * 1000).toISOString()
+            : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
+        })
+      })
+    })
+
+    storage.saveChats(validChats)
     storage.saveContacts(contacts)
-    storage.saveMessages(messagesByChat) */
+    storage.saveMessages(messagesByChat)
 
     win.webContents.send('sync-data', {
       chats: validChats,
@@ -172,20 +200,30 @@ async function initBaileys() {
         }
       })
 
+      console.log('\nSending new messages to renderer:')
+      Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
+        console.log(`\nMessages for chat ${chatId}:`)
+        msgs.forEach(msg => {
+          console.log('Message timestamp:', {
+            raw: msg.messageTimestamp,
+            type: typeof msg.messageTimestamp,
+            parsed: typeof msg.messageTimestamp === 'number'
+              ? new Date(msg.messageTimestamp * 1000).toISOString()
+              : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
+          })
+        })
+      })
+
       // Update storage with new messages
-      /* const currentMessages = storage.loadMessages()
+      const currentMessages = storage.loadMessages()
       Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
         if (!currentMessages[chatId]) {
           currentMessages[chatId] = []
         }
         currentMessages[chatId] = [...msgs, ...currentMessages[chatId]]
       })
-      storage.saveMessages(currentMessages) */
+      storage.saveMessages(currentMessages)
 
-      console.log('\n\n\n')
-      console.log('updated messages to send and orderred', { messages })
-
-      // Send only the new messages to renderer
       win.webContents.send('new-messages', messagesByChat)
     }
   })
@@ -203,6 +241,7 @@ ipcMain.on('send-message', async (event, { jid, message }) => {
   }
 
   const fullJid = jid.includes('@') ? jid : `${jid}@s.whatsapp.net`
+  const timestamp = Math.floor(Date.now() / 1000)
 
   console.log('Sending message via Baileys:', {
     to: fullJid,
@@ -210,7 +249,30 @@ ipcMain.on('send-message', async (event, { jid, message }) => {
   })
 
   try {
-    await sock.sendMessage(fullJid, { text: message })
+    const result = await sock.sendMessage(fullJid, { text: message })
+    const messageId = result?.key?.id
+
+    // Create a message object with the real ID
+    const sentMessage = {
+      key: {
+        remoteJid: fullJid,
+        fromMe: true,
+        id: messageId || `temp-${timestamp}`
+      },
+      message: {
+        conversation: message
+      },
+      messageTimestamp: timestamp,
+      status: 0 // PENDING
+    }
+
+    // Save to storage
+    const currentMessages = storage.loadMessages()
+    if (!currentMessages[fullJid]) {
+      currentMessages[fullJid] = []
+    }
+    currentMessages[fullJid] = [sentMessage, ...currentMessages[fullJid]]
+    storage.saveMessages(currentMessages)
   } catch (error) {
     console.error('Error sending message:', error)
   }

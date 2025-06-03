@@ -31,10 +31,7 @@ import { COMMANDS } from './commands'
 
 export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
-  const [qrImg, setQrImg] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
-  const [number, setNumber] = useState('')
-  const [message, setMessage] = useState('')
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false)
 
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
@@ -46,7 +43,7 @@ export default function ChatInterface(): ReactElement {
 
   // Filter chats based on active filter
   const filteredChats = chats.filter((chat) => {
-    if (activeFilter === 'unreads') return (chat.unreadCount || 0) > 0
+    if (activeFilter === 'unreads') return chat.isUnread
     if (activeFilter === 'silenced') return chat.isSilenced
 
     // Inbox filters
@@ -67,7 +64,6 @@ export default function ChatInterface(): ReactElement {
       console.log('got qr', { code })
       setQR(code)
       console.log('got dataUrl', { code })
-      setQrImg(code)
     })
     window.electronAPI.onReady(() => {
       setQR(null)
@@ -233,7 +229,7 @@ export default function ChatInterface(): ReactElement {
 
         setChats(prevChats =>
           prevChats.map(chat =>
-            chat.id === selectedChat.id ? { ...chat, unreadCount: (chat.unreadCount || 0) + 1 } : chat
+            chat.id === selectedChat.id ? { ...chat, isUnread: true } : chat
           )
         )
       }
@@ -401,7 +397,7 @@ export default function ChatInterface(): ReactElement {
               >
                 <span>Unreads</span>
                 <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
-                  {chats.filter((chat) => (chat.unreadCount || 0) > 0).length}
+                  {chats.filter((chat) => chat.isUnread).length}
                 </Badge>
               </div>
 

@@ -5,6 +5,7 @@ export type Contact = BaileysContact
 export type Chat = BaileysChat & {
     tag?: string
     isSilenced?: boolean
+    isUnread?: boolean
 }
 
 export interface ChatState {

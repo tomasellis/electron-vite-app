@@ -12,6 +12,15 @@ if (!fs.existsSync(STORAGE_DIR)) {
     fs.mkdirSync(STORAGE_DIR, { recursive: true })
 }
 
+// Helper function to sort messages by timestamp
+const sortMessagesByTimestamp = (messages: IncomingMessage[]): IncomingMessage[] => {
+    return messages.sort((a, b) => {
+        const timeA = typeof a.messageTimestamp === 'number' ? a.messageTimestamp : a.messageTimestamp?.low || 0
+        const timeB = typeof b.messageTimestamp === 'number' ? b.messageTimestamp : b.messageTimestamp?.low || 0
+        return timeB - timeA // Sort in descending order (newest first)
+    })
+}
+
 export const storage = {
     saveChats: (newChats: Chat[]) => {
         const existingChats = storage.loadChats()
@@ -76,9 +85,20 @@ export const storage = {
         const updatedMessages = { ...existingMessages }
 
         Object.entries(newMessages).forEach(([chatId, msgs]) => {
+            console.log('\nSaving messages for chat:', chatId)
+            msgs.forEach(msg => {
+                console.log('Message timestamp:', {
+                    raw: msg.messageTimestamp,
+                    type: typeof msg.messageTimestamp,
+                    parsed: typeof msg.messageTimestamp === 'number'
+                        ? new Date(msg.messageTimestamp * 1000).toISOString()
+                        : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
+                })
+            })
+
             if (!updatedMessages[chatId]) {
                 // If chat doesn't exist, add all messages
-                updatedMessages[chatId] = msgs
+                updatedMessages[chatId] = sortMessagesByTimestamp(msgs)
             } else {
                 // For existing chat, merge messages and remove duplicates
                 const uniqueMessages = [...updatedMessages[chatId]]
@@ -92,7 +112,8 @@ export const storage = {
                         uniqueMessages[existingIndex] = { ...uniqueMessages[existingIndex], ...newMsg }
                     }
                 })
-                updatedMessages[chatId] = uniqueMessages
+                // Sort messages by timestamp after merging
+                updatedMessages[chatId] = sortMessagesByTimestamp(uniqueMessages)
             }
         })
 
@@ -102,7 +123,27 @@ export const storage = {
     loadMessages: (): Record<string, IncomingMessage[]> => {
         try {
             if (fs.existsSync(MESSAGES_FILE)) {
-                return JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf-8'))
+                const messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf-8'))
+                // Sort messages by timestamp when loading
+                Object.keys(messages).forEach(chatId => {
+                    console.log('\nLoading messages for chat:', chatId)
+                    // Convert string timestamps back to numbers
+                    messages[chatId] = messages[chatId].map(msg => ({
+                        ...msg,
+                        messageTimestamp: Number(msg.messageTimestamp)
+                    }))
+                    messages[chatId].forEach(msg => {
+                        console.log('Message timestamp:', {
+                            raw: msg.messageTimestamp,
+                            type: typeof msg.messageTimestamp,
+                            parsed: typeof msg.messageTimestamp === 'number'
+                                ? new Date(msg.messageTimestamp * 1000).toISOString()
+                                : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
+                        })
+                    })
+                    messages[chatId] = sortMessagesByTimestamp(messages[chatId])
+                })
+                return messages
             }
         } catch (error) {
             console.error('Error loading messages:', error)
