@@ -174,12 +174,6 @@ export default function ChatInterface(): ReactElement {
     })
   }, [])
 
-  function send() {
-    if (number && message) {
-      window.electronAPI.sendMessage({ number, message })
-    }
-  }
-
   const handleReloadSync = () => {
     window.electronAPI.reloadSync()
   }

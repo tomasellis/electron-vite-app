@@ -4,6 +4,7 @@ import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { DisconnectReason, makeWASocket, useMultiFileAuthState, WASocket } from 'baileys'
 import QRCode from 'qrcode'
+import { storage } from './storage'
 
 let win: BrowserWindow
 let sock: null | WASocket
@@ -90,31 +91,23 @@ async function initBaileys() {
     if (connection === 'open') {
       win.webContents.send('ready')
 
-      /* // Load test data
-      const testData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../testdata/sync-3.json'), 'utf-8'))
-      const messagesByChat: Record<string, any[]> = {}
+      // Load cached data
+      const cachedChats = storage.loadChats()
+      const cachedContacts = storage.loadContacts()
+      const cachedMessages = storage.loadMessages()
 
-      testData.chats.forEach(chat => {
-        messagesByChat[chat.id] = []
-      })
-
-      testData.messages.forEach(msg => {
-        const chatId = msg.key.remoteJid
-        if (chatId && messagesByChat[chatId]) {
-          messagesByChat[chatId].push(msg)
-        }
-      })
-
-      win.webContents.send('sync-data', {
-        chats: testData.chats,
-        contacts: testData.contacts,
-        messages: messagesByChat
-      }) */
+      if (cachedChats.length > 0 || cachedContacts.length > 0) {
+        win.webContents.send('sync-data', {
+          chats: cachedChats,
+          contacts: cachedContacts,
+          messages: cachedMessages
+        })
+      }
     }
 
     if (
       connection === 'close' &&
-      lastDisconnect?.error?.output?.statusCode === DisconnectReason.restartRequired
+      (lastDisconnect?.error as any)?.output?.statusCode === DisconnectReason.restartRequired
     ) {
       console.log('>>>>>>>>>>>> restart required, reconnecting')
       initBaileys()
@@ -122,7 +115,7 @@ async function initBaileys() {
 
     if (
       connection === 'close' &&
-      lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut
+      (lastDisconnect?.error as any)?.output?.statusCode === DisconnectReason.loggedOut
     ) {
       const authDir = path.resolve('../../auth/')
       fs.rmSync(authDir, { recursive: true, force: true })
@@ -146,6 +139,10 @@ async function initBaileys() {
         messagesByChat[chatId].push(msg)
       }
     })
+
+    /* storage.saveChats(validChats)
+    storage.saveContacts(contacts)
+    storage.saveMessages(messagesByChat) */
 
     win.webContents.send('sync-data', {
       chats: validChats,
@@ -175,17 +172,22 @@ async function initBaileys() {
         }
       })
 
+      // Update storage with new messages
+      /* const currentMessages = storage.loadMessages()
+      Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
+        if (!currentMessages[chatId]) {
+          currentMessages[chatId] = []
+        }
+        currentMessages[chatId] = [...msgs, ...currentMessages[chatId]]
+      })
+      storage.saveMessages(currentMessages) */
+
       console.log('\n\n\n')
       console.log('updated messages to send and orderred', { messages })
 
       // Send only the new messages to renderer
       win.webContents.send('new-messages', messagesByChat)
     }
-  })
-
-  sock.ev.on('error', (err) => {
-    console.error('whatsapp connection error:', err)
-    win.webContents.send('error', 'connection error ocurred')
   })
 }
 
@@ -200,7 +202,6 @@ ipcMain.on('send-message', async (event, { jid, message }) => {
     return
   }
 
-  // Ensure JID is in correct format
   const fullJid = jid.includes('@') ? jid : `${jid}@s.whatsapp.net`
 
   console.log('Sending message via Baileys:', {
