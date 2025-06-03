@@ -1,7 +1,6 @@
 import { Check, CheckCheck } from 'lucide-react'
 import { IncomingMessage } from '../../types'
 import { ReactElement } from 'react'
-import { proto } from 'baileys'
 
 interface MessageBubbleProps {
   message: IncomingMessage
@@ -10,10 +9,13 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): ReactElement {
   const messageContent = message.message?.conversation || message.message?.extendedTextMessage?.text || ''
-  const timestamp = new Date(Number(message.messageTimestamp) * 1000).toLocaleTimeString()
 
-  const isRead = message.status === proto.WebMessageInfo.Status.READ
-  const isDelivered = message.status === proto.WebMessageInfo.Status.DELIVERY_ACK
+  const timestamp = message.messageTimestamp
+    ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString()
+    : ''
+
+  const isRead = message.status === 4 // READ
+  const isDelivered = message.status === 3 // DELIVERY_ACK
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
