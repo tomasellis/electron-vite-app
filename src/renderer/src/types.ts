@@ -1,0 +1,15 @@
+import { Contact as BaileysContact, Chat as BaileysChat, proto } from 'baileys'
+
+export type IncomingMessage = proto.IWebMessageInfo
+export type Contact = BaileysContact
+export type Chat = BaileysChat & {
+    tag?: string
+    isSilenced?: boolean
+}
+
+export interface ChatState {
+    contacts: Contact[]
+    chats: Chat[]
+    messages: Record<string, IncomingMessage[]>
+    activeChatId: string | null
+} 

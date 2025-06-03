@@ -89,6 +89,27 @@ async function initBaileys() {
     }
     if (connection === 'open') {
       win.webContents.send('ready')
+
+      // Load test data
+      const testData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../testdata/sync-3.json'), 'utf-8'))
+      const messagesByChat: Record<string, any[]> = {}
+
+      testData.chats.forEach(chat => {
+        messagesByChat[chat.id] = []
+      })
+
+      testData.messages.forEach(msg => {
+        const chatId = msg.key.remoteJid
+        if (chatId && messagesByChat[chatId]) {
+          messagesByChat[chatId].push(msg)
+        }
+      })
+
+      /* win.webContents.send('sync-data', {
+        chats: testData.chats,
+        contacts: testData.contacts,
+        messages: messagesByChat
+      }) */
     }
 
     if (
@@ -110,6 +131,27 @@ async function initBaileys() {
 
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
     console.log({ chats, contacts, messages, syncType })
+
+    // Load test data
+    const testData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../testdata/sync-3.json'), 'utf-8'))
+    const messagesByChat: Record<string, any[]> = {}
+
+    testData.chats.forEach(chat => {
+      messagesByChat[chat.id] = []
+    })
+
+    testData.messages.forEach(msg => {
+      const chatId = msg.key.remoteJid
+      if (chatId && messagesByChat[chatId]) {
+        messagesByChat[chatId].push(msg)
+      }
+    })
+
+    win.webContents.send('sync-data', {
+      chats: testData.chats,
+      contacts: testData.contacts,
+      messages: messagesByChat
+    })
   })
 
   sock.ev.on('messages.upsert', ({ type, messages }) => {

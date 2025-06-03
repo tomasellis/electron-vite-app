@@ -1,67 +1,41 @@
-import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User } from 'lucide-react'
+import { ReactElement } from 'react'
+import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User, X } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { Chat, IncomingMessage } from '../types'
+import { MessageBubble } from './ui/message-bubble'
 
-export default function ChatView({ chat, onClose }) {
+interface ChatViewProps {
+  chat: Chat
+  messages: IncomingMessage[]
+  onClose: () => void
+}
+
+export default function ChatView({ chat, messages, onClose }: ChatViewProps): ReactElement {
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <div className="flex items-center space-x-3">
-          <User />
+          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+            {chat.name?.[0]?.toUpperCase() || chat.id[0]?.toUpperCase()}
+          </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <h2 className="font-semibold">{chat.name}</h2>
-              {chat.tag && (
-                <Badge
-                  className={`
-                  text-xs px-2
-                  ${chat.tag === 'Kungfu' ? 'bg-green-600' : ''}
-                  ${chat.tag === 'Friends' ? 'bg-green-600' : ''}
-                  ${chat.tag === 'Office' ? 'bg-blue-600' : ''}
-                  ${chat.tag === 'Personal' ? 'bg-purple-600' : ''}
-                `}
-                >
-                  {chat.tag}
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-gray-400">Active now</p>
+            <h2 className="text-lg font-semibold">{chat.name || chat.id}</h2>
+            <p className="text-sm text-gray-400">Online</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {chat.isSilenced ? (
-            <Button variant="ghost" size="icon">
-              <BellOff className="h-5 w-5" />
-            </Button>
-          ) : (
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </div>
+        <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full">
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4">
-          <div className="flex justify-start">
-            <div className="bg-gray-700 rounded-lg p-3 max-w-xs">
-              <p className="text-sm">Test msg 1</p>
-              <span className="text-xs text-gray-400 mt-1 block">2:30 PM</span>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <div className="bg-[#0f8a6d] rounded-lg p-3 max-w-xs">
-              <p className="text-sm">Test msg 2</p>
-              <span className="text-xs text-gray-300 mt-1 block">2:32 PM</span>
-            </div>
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message, index) => (
+          <MessageBubble key={index} message={message} />
+        ))}
       </div>
 
       {/* Message Input */}

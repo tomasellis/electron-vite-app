@@ -1,8 +1,20 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { ElectronAPI } from './index.d'
+import { Chat, Contact, IncomingMessage } from '../renderer/src/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  onQR: (callback) => ipcRenderer.on('qr', (_, data) => callback(data)),
-  onReady: (callback) => ipcRenderer.on('ready', callback),
-  sendMessage: (data) => ipcRenderer.send('send-message', data)
-} as ElectronAPI)
+  onQR: (callback: (code: string) => void) => {
+    ipcRenderer.on('qr', (_event, code) => callback(code))
+  },
+  onReady: (callback: () => void) => {
+    ipcRenderer.on('ready', () => callback())
+  },
+  onSyncData: (callback: (data: { chats: Chat[], contacts: Contact[], messages: Record<string, IncomingMessage[]> }) => void) => {
+    ipcRenderer.on('sync-data', (_event, data) => callback(data))
+  },
+  reloadSync: () => {
+    ipcRenderer.send('reload-sync')
+  },
+  sendMessage: (data: { number: string; message: string }) => {
+    ipcRenderer.send('send-message', data)
+  }
+})

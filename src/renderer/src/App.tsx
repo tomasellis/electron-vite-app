@@ -9,7 +9,8 @@ import {
   MessageSquare,
   Settings,
   Check,
-  BellOff
+  BellOff,
+  RefreshCw
 } from 'lucide-react'
 import { Badge } from './components/ui/badge'
 import {
@@ -20,11 +21,12 @@ import {
 } from './components/ui/dropdown-menu'
 import { useHotkeys } from './hooks/useHotkeys'
 import CommandBar from './components/command-bar'
+import { Button } from './components/ui/button'
 
 import ChatView from './components/chat-view'
 import ShortcutsView from './components/shortcuts-view'
 import ChatItem from './components/chat-item'
-import { Chat } from './types'
+import { Chat, Contact, IncomingMessage } from './types'
 import { COMMANDS } from './commands'
 
 export default function ChatInterface(): ReactElement {
@@ -38,46 +40,13 @@ export default function ChatInterface(): ReactElement {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
   const [inboxFilter, setInboxFilter] = useState('all')
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: 1,
-      name: 'Matías Carpintini',
-      message: 'typing...',
-      time: '17:18',
-      avatar: '/placeholder.svg?height=40&width=40',
-      isTyping: true,
-      isUnread: true,
-      isSilenced: true,
-      tag: 'Personal'
-    },
-    {
-      id: 2,
-      name: 'Entrenamiento Martial Games',
-      message: 'Eddie: Por Vicente López está empezando a c...',
-      time: '17:08',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Kungfu',
-      isActive: true,
-      isUnread: false,
-      isSilenced: false
-    },
-    {
-      id: 3,
-      name: 'Zuck',
-      message: '0:09',
-      time: '16:35',
-      avatar: '/placeholder.svg?height=40&width=40',
-      tag: 'Friends',
-      hasVoiceMessage: true,
-      isRead: true,
-      isUnread: false,
-      isSilenced: false
-    }
-  ])
+  const [chats, setChats] = useState<Chat[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [messages, setMessages] = useState<Record<string, IncomingMessage[]>>({})
 
   // Filter chats based on active filter
-  const filteredChats: (typeof chats)[0][] = chats.filter((chat) => {
-    if (activeFilter === 'unreads') return chat.isUnread
+  const filteredChats = chats.filter((chat) => {
+    if (activeFilter === 'unreads') return (chat.unreadCount || 0) > 0
     if (activeFilter === 'silenced') return chat.isSilenced
 
     // Inbox filters
@@ -104,6 +73,11 @@ export default function ChatInterface(): ReactElement {
       setQR(null)
       setReady(true)
     })
+    window.electronAPI.onSyncData((data) => {
+      setChats(data.chats)
+      setContacts(data.contacts)
+      setMessages(data.messages)
+    })
   }, [])
 
   function send() {
@@ -112,8 +86,12 @@ export default function ChatInterface(): ReactElement {
     }
   }
 
+  const handleReloadSync = () => {
+    window.electronAPI.reloadSync()
+  }
+
   // Add this function to handle chat selection
-  const handleChatSelect = (chat: typeof chats[0]) => {
+  const handleChatSelect = (chat: Chat) => {
     setSelectedChat(chat)
     // Update the chat's read status
     setChats(prevChats =>
@@ -167,7 +145,7 @@ export default function ChatInterface(): ReactElement {
 
         setChats(prevChats =>
           prevChats.map(chat =>
-            chat.id === selectedChat.id ? { ...chat, isUnread: true } : chat
+            chat.id === selectedChat.id ? { ...chat, unreadCount: (chat.unreadCount || 0) + 1 } : chat
           )
         )
       }
@@ -204,217 +182,208 @@ export default function ChatInterface(): ReactElement {
     }
   }
 
-  // if (!ready && qr) {
-  //   console.log('QR>>>>>', qr)
-  //   return (
-  //     <div style={{ padding: 20 }}>
-  //       <h2>scan me :^)</h2>
-  //       <img src={qrImg} alt="qr code" width={256} height={256} />
-  //     </div>
-  //   )
-  // }
-  //
-  // return (
-  //   <div style={{ padding: 20 }}>
-  //     <h2>yo you re in</h2>
-  //     <input
-  //       placeholder="number"
-  //       value={number}
-  //       onChange={(e) => setNumber(e.target.value)}
-  //       style={{ marginBottom: 10, display: 'block', width: '100%' }}
-  //     />
-  //     <textarea
-  //       placeholder="message"
-  //       value={message}
-  //       onChange={(e) => setMessage(e.target.value)}
-  //       style={{ marginBottom: 10, display: 'block', width: '100%' }}
-  //     />
-  //     <button onClick={send}>send it 📨</button>
-  //   </div>
-  // )
+  useEffect(() => {
+    console.log("loading", chats, messages)
+  }, [chats, messages])
 
   return (
     <div className="flex h-screen bg-[#1a2330] text-white overflow-hidden">
-      {/* Left Sidebar */}
-      <div className="w-16 bg-[#1a2330] border-r border-gray-800 flex flex-col items-center py-4 space-y-6 flex-shrink-0">
-        <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
-          <MessageSquare className="h-6 w-6 text-gray-400" />
+      {!ready && qr ? (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h2 className="text-2xl mb-4">Scan QR Code to Login</h2>
+          <img src={qr} alt="qr code" width={256} height={256} className="rounded-lg" />
         </div>
-        <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
-          <Users className="h-6 w-6 text-gray-400" />
-        </div>
-        <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
-          <Clock className="h-6 w-6 text-gray-400" />
-        </div>
-        <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
-          <Settings className="h-6 w-6 text-gray-400" />
-        </div>
-      </div>
-
-      {/* Chat List - 1/3 of screen */}
-      <div className="w-1/3 bg-[#1a2330] border-r border-gray-800 flex flex-col flex-shrink-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <h1 className="text-xl font-bold">Chats</h1>
-          <div className="flex items-center space-x-2">
-            <button className="p-1 rounded-md hover:bg-gray-800">
-              <Plus className="h-5 w-5" />
-            </button>
-            <button className="p-1 rounded-md hover:bg-gray-800">
-              <Search className="h-5 w-5" />
-            </button>
-            <button className="p-1 rounded-md hover:bg-gray-800">
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center p-2 space-x-2 border-b border-gray-800">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div
-                className={`flex items-center space-x-1 ${activeFilter === 'inbox' ? 'bg-[#0f8a6d]' : 'bg-gray-800'} text-white px-3 py-1 rounded-full cursor-pointer`}
-              >
-                <span>Inbox{inboxFilter !== 'all' ? `: ${inboxFilter}` : ''}</span>
-                <ChevronDown className="h-4 w-4" />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
-              <DropdownMenuItem
-                className="hover:bg-gray-700 cursor-pointer"
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('all')
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>All</span>
-                  {inboxFilter === 'all' && <Check className="h-4 w-4 ml-2" />}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="hover:bg-gray-700 cursor-pointer"
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('kungfu')
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>Kungfu</span>
-                  {inboxFilter === 'kungfu' && <Check className="h-4 w-4 ml-2" />}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="hover:bg-gray-700 cursor-pointer"
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('friends')
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>Friends</span>
-                  {inboxFilter === 'friends' && <Check className="h-4 w-4 ml-2" />}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="hover:bg-gray-700 cursor-pointer"
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('office')
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>Office</span>
-                  {inboxFilter === 'office' && <Check className="h-4 w-4 ml-2" />}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="hover:bg-gray-700 cursor-pointer"
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('personal')
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>Personal</span>
-                  {inboxFilter === 'personal' && <Check className="h-4 w-4 ml-2" />}
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div
-            className={`px-3 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1`}
-            onClick={() => setActiveFilter('unreads')}
-          >
-            <span>Unreads</span>
-            <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
-              {chats.filter((chat) => chat.isUnread).length}
-            </Badge>
-          </div>
-
-          <div
-            className={`px-3 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center`}
-            onClick={() => setActiveFilter('silenced')}
-          >
-            <span>Silenced</span>
-            <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
-              {chats.filter((chat) => chat.isSilenced).length}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Chat List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredChats.length > 0 ? (
-            filteredChats.map((chat) => (
-              <ChatItem
-                key={chat.id}
-                chat={chat}
-                isSelected={selectedChat?.id === chat.id}
-                onClick={() => handleChatSelect(chat)}
-              />
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <div className="mb-2">
-                {activeFilter === 'unreads' ? (
-                  <Check className="h-12 w-12" />
-                ) : activeFilter === 'silenced' ? (
-                  <BellOff className="h-12 w-12" />
-                ) : (
-                  <MessageSquare className="h-12 w-12" />
-                )}
-              </div>
-              <p className="text-lg">No {activeFilter} chats</p>
-              <p className="text-sm mt-1">
-                {activeFilter === 'unreads'
-                  ? "You've read all your messages"
-                  : activeFilter === 'silenced'
-                    ? 'No silenced conversations'
-                    : `No chats in ${inboxFilter} category`}
-              </p>
+      ) : (
+        <>
+          {/* Left Sidebar */}
+          <div className="w-16 bg-[#1a2330] border-r border-gray-800 flex flex-col items-center py-4 space-y-6 flex-shrink-0">
+            <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
+              <MessageSquare className="h-6 w-6 text-gray-400" />
             </div>
-          )}
-        </div>
-      </div>
+            <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
+              <Users className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
+              <Clock className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
+              <Settings className="h-6 w-6 text-gray-400" />
+            </div>
+          </div>
 
-      {/* Right Panel - Chat or Shortcuts */}
-      <div className="flex-1 bg-[#1a2330] flex flex-col">
-        {selectedChat ? (
-          <ChatView chat={selectedChat} onClose={() => setSelectedChat(null)} />
-        ) : (
-          <ShortcutsView />
-        )}
-      </div>
+          {/* Chat List - 1/3 of screen */}
+          <div className="w-1/3 bg-[#1a2330] border-r border-gray-800 flex flex-col flex-shrink-0">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <h1 className="text-xl font-bold">Chats</h1>
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="icon" onClick={handleReloadSync}>
+                  <RefreshCw className="h-5 w-5" />
+                </Button>
+                <button className="p-1 rounded-md hover:bg-gray-800">
+                  <Plus className="h-5 w-5" />
+                </button>
+                <button className="p-1 rounded-md hover:bg-gray-800">
+                  <Search className="h-5 w-5" />
+                </button>
+                <button className="p-1 rounded-md hover:bg-gray-800">
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
 
-      {/* Command Bar */}
-      <CommandBar
-        isOpen={isCommandBarOpen}
-        onClose={() => setIsCommandBarOpen(false)}
-        onExecute={handleCommand}
-      />
+            {/* Filters */}
+            <div className="flex items-center p-2 space-x-2 border-b border-gray-800">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div
+                    className={`flex items-center space-x-1 ${activeFilter === 'inbox' ? 'bg-[#0f8a6d]' : 'bg-gray-800'} text-white px-3 py-1 rounded-full cursor-pointer`}
+                  >
+                    <span>Inbox{inboxFilter !== 'all' ? `: ${inboxFilter}` : ''}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
+                  <DropdownMenuItem
+                    className="hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setActiveFilter('inbox')
+                      setInboxFilter('all')
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>All</span>
+                      {inboxFilter === 'all' && <Check className="h-4 w-4 ml-2" />}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setActiveFilter('inbox')
+                      setInboxFilter('kungfu')
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Kungfu</span>
+                      {inboxFilter === 'kungfu' && <Check className="h-4 w-4 ml-2" />}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setActiveFilter('inbox')
+                      setInboxFilter('friends')
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Friends</span>
+                      {inboxFilter === 'friends' && <Check className="h-4 w-4 ml-2" />}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setActiveFilter('inbox')
+                      setInboxFilter('office')
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Office</span>
+                      {inboxFilter === 'office' && <Check className="h-4 w-4 ml-2" />}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setActiveFilter('inbox')
+                      setInboxFilter('personal')
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Personal</span>
+                      {inboxFilter === 'personal' && <Check className="h-4 w-4 ml-2" />}
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div
+                className={`px-3 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1`}
+                onClick={() => setActiveFilter('unreads')}
+              >
+                <span>Unreads</span>
+                <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
+                  {chats.filter((chat) => (chat.unreadCount || 0) > 0).length}
+                </Badge>
+              </div>
+
+              <div
+                className={`px-3 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center`}
+                onClick={() => setActiveFilter('silenced')}
+              >
+                <span>Silenced</span>
+                <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
+                  {chats.filter((chat) => chat.isSilenced).length}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredChats.length > 0 ? (
+                filteredChats.map((chat) => (
+                  <ChatItem
+                    key={chat.id}
+                    chat={chat}
+                    isSelected={selectedChat?.id === chat.id}
+                    onClick={() => handleChatSelect(chat)}
+                  />
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <div className="mb-2">
+                    {activeFilter === 'unreads' ? (
+                      <Check className="h-12 w-12" />
+                    ) : activeFilter === 'silenced' ? (
+                      <BellOff className="h-12 w-12" />
+                    ) : (
+                      <MessageSquare className="h-12 w-12" />
+                    )}
+                  </div>
+                  <p className="text-lg">No {activeFilter} chats</p>
+                  <p className="text-sm mt-1">
+                    {activeFilter === 'unreads'
+                      ? "You've read all your messages"
+                      : activeFilter === 'silenced'
+                        ? 'No silenced conversations'
+                        : `No chats in ${inboxFilter} category`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel - Chat or Shortcuts */}
+          <div className="flex-1 bg-[#1a2330] flex flex-col">
+            {selectedChat ? (
+              <ChatView
+                chat={selectedChat}
+                messages={messages[selectedChat.id] || []}
+                onClose={() => setSelectedChat(null)}
+              />
+            ) : (
+              <ShortcutsView />
+            )}
+          </div>
+
+          {/* Command Bar */}
+          <CommandBar
+            isOpen={isCommandBarOpen}
+            onClose={() => setIsCommandBarOpen(false)}
+            onExecute={handleCommand}
+          />
+        </>
+      )}
     </div>
   )
 }
