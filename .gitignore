@@ -8,3 +8,6 @@ auth
 build
 testdata
 userData
+.env
+*.mp3
+*.wav
