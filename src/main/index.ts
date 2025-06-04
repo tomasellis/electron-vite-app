@@ -6,6 +6,7 @@ import { DisconnectReason, makeWASocket, useMultiFileAuthState, WASocket, downlo
 import QRCode from 'qrcode'
 import { storage } from './storage'
 import { pathToFileURL } from 'url'
+import { run } from './transformers'
 
 let win: BrowserWindow
 let sock: null | WASocket
@@ -42,6 +43,7 @@ function createWindow(): void {
 
   win.on('ready-to-show', () => {
     win.show()
+    win.webContents.openDevTools()
   })
 
   win.webContents.setWindowOpenHandler((details) => {
@@ -57,6 +59,11 @@ app.whenReady().then(() => {
   })
 
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Add a handler for the `transformers:run` event. This enables 2-way communication
+  // between the renderer process (UI) and the main process (processing).
+  // https://www.electronjs.org/docs/latest/tutorial/ipc#pattern-2-renderer-to-main-two-way
+  ipcMain.handle('transcribe-audio', run)
 
   createWindow()
   initBaileys()

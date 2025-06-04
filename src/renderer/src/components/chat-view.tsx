@@ -1,5 +1,5 @@
 import { ReactElement, useState } from 'react'
-import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User, X } from 'lucide-react'
+import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User, X, Mic } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -82,16 +82,36 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
             isOwn={message.key.fromMe ?? false}
           />
         ))}
-        {/* Test audio player */}
-        <div className="flex justify-center mb-4">
-          <audio
-            controls
-            className="w-[200px]"
-            src="app://audio/test.mp3"
-          >
-            Your browser does not support the audio element.
-          </audio>
-        </div>
+
+      </div>
+      {/* Test audio player */}
+      <div className="flex flex-col items-center mb-4 space-y-2">
+        <audio
+          controls
+          className="w-[200px]"
+          src="app://audio/test.wav"
+        >
+          Your browser does not support the audio element.
+        </audio>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={async () => {
+            try {
+              const result = await window.electronAPI.transcribeAudio('app://audio/test1.wav')
+              console.log('Transcription:', result)
+              // Display the transcription text
+              alert(result || 'No transcription available')
+            } catch (error) {
+              console.error('Error transcribing audio:', error)
+              alert('Error transcribing audio. Check console for details.')
+            }
+          }}
+          className="text-xs"
+        >
+          <Mic className="h-3 w-3 mr-1" />
+          Transcribe Test Audio
+        </Button>
       </div>
 
       {/* Message Input */}

@@ -13,5 +13,6 @@ export interface ElectronAPI {
   onNewMessages: (callback: (messages: Record<string, IncomingMessage[]>) => void) => void
   reloadSync: () => void
   sendMessage: (data: { jid: string; message: string }) => void
+  transcribeAudio: (path: string) => string
 }
 

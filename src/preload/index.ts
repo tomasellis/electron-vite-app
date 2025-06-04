@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   sendMessage: (data: { number: string; message: string }) => {
     ipcRenderer.send('send-message', data)
-  }
+  },
+  transcribeAudio: (path) => ipcRenderer.invoke('transcribe-audio', path)
 })
