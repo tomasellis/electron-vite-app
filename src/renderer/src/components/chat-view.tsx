@@ -73,6 +73,8 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse">
+
+
         {messages.map((message) => (
           <MessageBubble
             key={`${message.key.id}-${message.key.remoteJid}`}
@@ -80,6 +82,16 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
             isOwn={message.key.fromMe ?? false}
           />
         ))}
+        {/* Test audio player */}
+        <div className="flex justify-center mb-4">
+          <audio
+            controls
+            className="w-[200px]"
+            src="app://audio/test.mp3"
+          >
+            Your browser does not support the audio element.
+          </audio>
+        </div>
       </div>
 
       {/* Message Input */}

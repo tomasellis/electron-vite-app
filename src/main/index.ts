@@ -1,13 +1,28 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol, net } from 'electron'
 import path, { join } from 'path'
 import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { DisconnectReason, makeWASocket, useMultiFileAuthState, WASocket } from 'baileys'
+import { DisconnectReason, makeWASocket, useMultiFileAuthState, WASocket, downloadMediaMessage } from 'baileys'
 import QRCode from 'qrcode'
 import { storage } from './storage'
+import { pathToFileURL } from 'url'
 
 let win: BrowserWindow
 let sock: null | WASocket
+
+// Register protocol schemes before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true,
+      stream: true,
+      standard: true,
+    },
+  },
+]);
 
 function createWindow(): void {
   win = new BrowserWindow({
@@ -18,7 +33,8 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webSecurity: false
     }
   })
 
@@ -44,6 +60,45 @@ app.whenReady().then(() => {
 
   createWindow()
   initBaileys()
+
+  protocol.handle('app', (req) => {
+    const { host, pathname } = new URL(req.url)
+
+    if (host === 'audio') {
+      // Base directory for audio files
+      const baseDir = path.join(app.getPath('userData'), 'audio')
+
+      // Resolve the full path
+      const fullPath = path.join(baseDir, pathname)
+
+      // Security check: ensure the path is within our audio directory
+      const relativePath = path.relative(baseDir, fullPath)
+      const isSafe = relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
+
+      if (!isSafe) {
+        return new Response('Access denied', {
+          status: 403,
+          headers: { 'content-type': 'text/plain' }
+        })
+      }
+
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        return new Response('File not found', {
+          status: 404,
+          headers: { 'content-type': 'text/plain' }
+        })
+      }
+
+      // Serve the file
+      return net.fetch(pathToFileURL(fullPath).toString())
+    }
+
+    return new Response('Not found', {
+      status: 404,
+      headers: { 'content-type': 'text/plain' }
+    })
+  })
 
   app.on('activate', function () {
     //macos
@@ -179,7 +234,7 @@ async function initBaileys() {
     })
   })
 
-  sock.ev.on('messages.upsert', ({ type, messages }) => {
+  sock.ev.on('messages.upsert', async ({ type, messages }) => {
     if (type === 'notify') {
       console.log('\n\n')
       console.log('MESSAGES UPSERT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
@@ -188,17 +243,26 @@ async function initBaileys() {
       // Organize new messages by chat
       const messagesByChat: Record<string, any[]> = {}
 
-      messages.forEach(msg => {
+      for (const msg of messages) {
         const chatId = msg.key.remoteJid
         if (chatId) {
           // Create array for this chat if it doesn't exist
           if (!messagesByChat[chatId]) {
             messagesByChat[chatId] = []
           }
+
+          // Download audio if present
+          if (msg.message?.audioMessage) {
+            const audioPath = await downloadAudioMessage(msg)
+            if (audioPath) {
+              msg.message.audioMessage.localPath = audioPath
+            }
+          }
+
           // Add message to its specific chat array
           messagesByChat[chatId].push(msg)
         }
-      })
+      }
 
       console.log('\nSending new messages to renderer:')
       Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
@@ -227,6 +291,33 @@ async function initBaileys() {
       win.webContents.send('new-messages', messagesByChat)
     }
   })
+}
+
+async function downloadAudioMessage(msg: any) {
+  try {
+    if (msg.message?.audioMessage) {
+      const buffer = await downloadMediaMessage(
+        msg,
+        'buffer',
+        {},
+      )
+
+      const audioDir = path.join(app.getPath('userData'), 'audio')
+      if (!fs.existsSync(audioDir)) {
+        fs.mkdirSync(audioDir, { recursive: true })
+      }
+
+      const fileName = `${msg.key.id}.ogg`
+      const filePath = path.join(audioDir, fileName)
+      fs.writeFileSync(filePath, buffer)
+
+      return `app://audio/${fileName}`
+    }
+    return null
+  } catch (error) {
+    console.error('Error downloading audio:', error)
+    return null
+  }
 }
 
 ipcMain.on('send-message', async (event, { jid, message }) => {
