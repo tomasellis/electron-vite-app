@@ -31,7 +31,6 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
           <>
             <audio
               controls
-              className="w-[200px]"
               src={`app://audio/${message.key.id}.ogg`}
             >
               Your browser does not support the audio element.
