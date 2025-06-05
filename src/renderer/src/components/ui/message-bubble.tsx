@@ -11,6 +11,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): ReactElement {
 
   const [transcribedAudio, setTranscribedAudio] = useState<string | null>(null)
+  const [isTranscribing, setIsTranscribing] = useState(false)
 
   const messageContent = message.message?.conversation || message.message?.extendedTextMessage?.text || ''
   const audioMessage = message.message?.audioMessage as AudioMessage
@@ -39,25 +40,33 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
               variant="ghost"
               size="sm"
               onClick={async () => {
+                if (isTranscribing) return
+                setIsTranscribing(true)
                 try {
                   console.log('getting transcript from:', `app://${message.key.id}.ogg`, audioMessage)
                   const result = await window.electronAPI.transcribeAudio(`app://audio/${message.key.id}.ogg`)
                   console.log('Transcription:', result)
                   setTranscribedAudio(result)
-                  // Display the transcription text
-                  alert(result || 'No transcription available')
                 } catch (error) {
                   console.error('Error transcribing audio:', error)
                   alert('Error transcribing audio. Check console for details.')
+                } finally {
+                  setIsTranscribing(false)
                 }
               }}
-              className="text-xs"
+              className={`text-xs ${isTranscribing ? 'animate-pulse' : ''}`}
+              disabled={isTranscribing}
             >
-              <Mic className="h-3 w-3 mr-1" />
+              <Mic className={`h-3 w-3 mr-1 ${isTranscribing ? 'animate-pulse' : ''}`} />
               <p>
-                {transcribedAudio}
+                {isTranscribing ? 'Transcribing...' : 'Transcribe'}
               </p>
             </Button>
+            {transcribedAudio && (
+              <div className="mt-2 text-sm text-gray-200 break-words whitespace-pre-wrap">
+                {transcribedAudio}
+              </div>
+            )}
           </>
         ) : (
           <p className="text-sm">{messageContent}</p>
