@@ -7,6 +7,7 @@ import QRCode from 'qrcode'
 import { storage } from './storage'
 import { pathToFileURL } from 'url'
 import { run } from './transformers'
+import { transcribeAudio } from './transcription'
 
 let win: BrowserWindow
 let sock: null | WASocket
@@ -60,10 +61,15 @@ app.whenReady().then(() => {
 
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Add a handler for the `transformers:run` event. This enables 2-way communication
-  // between the renderer process (UI) and the main process (processing).
-  // https://www.electronjs.org/docs/latest/tutorial/ipc#pattern-2-renderer-to-main-two-way
-  ipcMain.handle('transcribe-audio', run)
+  // Add a handler for the transcribe-audio event
+  ipcMain.handle('transcribe-audio', async (_, audioPath) => {
+    try {
+      return await transcribeAudio(audioPath)
+    } catch (error) {
+      console.error('Error in transcription:', error)
+      throw error
+    }
+  })
 
   createWindow()
   initBaileys()
@@ -143,11 +149,9 @@ async function initBaileys() {
 
   sock.ev.on('connection.update', async (update) => {
     const { qr, connection, lastDisconnect } = update
-    console.log('connection update: ', { qr, connection })
 
     if (qr) {
       const qrDataUrl = await generateQR(qr)
-      console.log(await QRCode.toString(qr, { type: 'terminal' }))
       win.webContents.send('qr', qrDataUrl)
     }
     if (connection === 'open') {
@@ -188,14 +192,6 @@ async function initBaileys() {
       console.log('>>>>>>>>>>>> restart required, reconnecting')
       initBaileys()
     }
-
-    if (
-      connection === 'close' &&
-      (lastDisconnect?.error as any)?.output?.statusCode === DisconnectReason.loggedOut
-    ) {
-      const authDir = path.resolve('../../auth/')
-      fs.rmSync(authDir, { recursive: true, force: true })
-    }
   })
 
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
@@ -212,6 +208,14 @@ async function initBaileys() {
     messages.forEach(msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
+        // Download audio if present
+        if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
+          downloadAudioMessage(msg).then(audioPath => {
+            if (audioPath && msg.message && msg.message.audioMessage) {
+              msg.message.audioMessage['localPath'] = audioPath
+            }
+          })
+        }
         messagesByChat[chatId].push(msg)
       }
     })
@@ -259,10 +263,10 @@ async function initBaileys() {
           }
 
           // Download audio if present
-          if (msg.message?.audioMessage) {
+          if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
             const audioPath = await downloadAudioMessage(msg)
-            if (audioPath) {
-              msg.message.audioMessage.localPath = audioPath
+            if (audioPath && msg.message && msg.message.audioMessage) {
+              msg.message.audioMessage['localPath'] = audioPath
             }
           }
 
@@ -302,7 +306,7 @@ async function initBaileys() {
 
 async function downloadAudioMessage(msg: any) {
   try {
-    if (msg.message?.audioMessage) {
+    if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
       const buffer = await downloadMediaMessage(
         msg,
         'buffer',

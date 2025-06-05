@@ -1,7 +1,7 @@
-import { Check, CheckCheck } from 'lucide-react'
-import { IncomingMessage } from '../../types'
-import { ReactElement } from 'react'
-import { proto } from 'baileys'
+import { Check, CheckCheck, Mic } from 'lucide-react'
+import { AudioMessage, IncomingMessage } from '../../types'
+import { ReactElement, useState } from 'react'
+import { Button } from './button'
 
 interface MessageBubbleProps {
   message: IncomingMessage
@@ -9,8 +9,11 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): ReactElement {
+
+  const [transcribedAudio, setTranscribedAudio] = useState<string | null>(null)
+
   const messageContent = message.message?.conversation || message.message?.extendedTextMessage?.text || ''
-  const audioMessage = message.message?.audioMessage as (proto.Message.AudioMessage & { localPath?: string }) | undefined
+  const audioMessage = message.message?.audioMessage as AudioMessage
 
   const timestamp = message.messageTimestamp
     ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString()
@@ -25,13 +28,38 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
         className={`rounded-lg p-3 max-w-xs ${isOwn ? 'bg-[#0f8a6d]' : 'bg-gray-700'}`}
       >
         {audioMessage ? (
-          <audio
-            controls
-            className="w-[200px]"
-            src={audioMessage.localPath}
-          >
-            Your browser does not support the audio element.
-          </audio>
+          <>
+            <audio
+              controls
+              className="w-[200px]"
+              src={`app://audio/${message.key.id}.ogg`}
+            >
+              Your browser does not support the audio element.
+            </audio>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                try {
+                  console.log('getting transcript from:', `app://${message.key.id}.ogg`, audioMessage)
+                  const result = await window.electronAPI.transcribeAudio(`app://audio/${message.key.id}.ogg`)
+                  console.log('Transcription:', result)
+                  setTranscribedAudio(result)
+                  // Display the transcription text
+                  alert(result || 'No transcription available')
+                } catch (error) {
+                  console.error('Error transcribing audio:', error)
+                  alert('Error transcribing audio. Check console for details.')
+                }
+              }}
+              className="text-xs"
+            >
+              <Mic className="h-3 w-3 mr-1" />
+              <p>
+                {transcribedAudio}
+              </p>
+            </Button>
+          </>
         ) : (
           <p className="text-sm">{messageContent}</p>
         )}

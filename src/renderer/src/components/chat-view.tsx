@@ -98,7 +98,7 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
           size="sm"
           onClick={async () => {
             try {
-              const result = await window.electronAPI.transcribeAudio('app://audio/test1.wav')
+              const result = await window.electronAPI.transcribeAudio('app://test1.wav')
               console.log('Transcription:', result)
               // Display the transcription text
               alert(result || 'No transcription available')

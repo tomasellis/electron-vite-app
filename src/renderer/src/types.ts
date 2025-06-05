@@ -13,4 +13,6 @@ export interface ChatState {
     chats: Chat[]
     messages: Record<string, IncomingMessage[]>
     activeChatId: string | null
-} 
+}
+
+export type AudioMessage = (proto.Message.AudioMessage & { localPath?: string }) | undefined
