@@ -84,35 +84,6 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
         ))}
 
       </div>
-      {/* Test audio player */}
-      <div className="flex flex-col items-center mb-4 space-y-2">
-        <audio
-          controls
-          className="w-[200px]"
-          src="app://audio/test.wav"
-        >
-          Your browser does not support the audio element.
-        </audio>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            try {
-              const result = await window.electronAPI.transcribeAudio('app://test1.wav')
-              console.log('Transcription:', result)
-              // Display the transcription text
-              alert(result || 'No transcription available')
-            } catch (error) {
-              console.error('Error transcribing audio:', error)
-              alert('Error transcribing audio. Check console for details.')
-            }
-          }}
-          className="text-xs"
-        >
-          <Mic className="h-3 w-3 mr-1" />
-          Transcribe Test Audio
-        </Button>
-      </div>
 
       {/* Message Input */}
       <div className="p-4 border-t border-gray-800">

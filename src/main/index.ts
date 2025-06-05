@@ -71,8 +71,10 @@ app.whenReady().then(() => {
     }
   })
 
-  createWindow()
+
   initBaileys()
+
+  createWindow()
 
   protocol.handle('app', (req) => {
     const { host, pathname } = new URL(req.url)

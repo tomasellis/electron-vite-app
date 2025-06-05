@@ -33,6 +33,7 @@ export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
@@ -70,6 +71,7 @@ export default function ChatInterface(): ReactElement {
       setReady(true)
     })
     window.electronAPI.onSyncData((data) => {
+      setIsLoading(false)
       // Merge new chats with existing ones
       setChats(prevChats => {
         const newChats = [...prevChats]
@@ -277,6 +279,11 @@ export default function ChatInterface(): ReactElement {
           <h2 className="text-2xl mb-4">Scan QR Code to Login</h2>
           <img src={qr} alt="qr code" width={256} height={256} className="rounded-lg" />
         </div>
+      ) : isLoading ? (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0f8a6d] mb-4"></div>
+          <h2 className="text-2xl">Loading your chats...</h2>
+        </div>
       ) : (
         <>
           {/* Left Sidebar */}
@@ -301,9 +308,6 @@ export default function ChatInterface(): ReactElement {
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h1 className="text-xl font-bold">Chats</h1>
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" onClick={handleReloadSync}>
-                  <RefreshCw className="h-5 w-5" />
-                </Button>
                 <button className="p-1 rounded-md hover:bg-gray-800">
                   <Plus className="h-5 w-5" />
                 </button>
