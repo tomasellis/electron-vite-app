@@ -12,27 +12,23 @@ const openai = new OpenAI({
 
 export async function transcribeAudio(audioFilePath: string): Promise<string> {
     try {
-        // Convert app:// protocol to actual file path in user data directory
         const actualPath = audioFilePath.startsWith('app://')
-            ? path.join(app.getPath('userData'), audioFilePath.replace('app://', ''))
+            ? path.join(app.getPath('userData'), 'userData', audioFilePath.replace('app://', ''))
             : audioFilePath
 
-        // Ensure the file exists
         if (!fs.existsSync(actualPath)) {
             throw new Error(`Audio file not found at path: ${actualPath}`)
         }
 
-        // Create a read stream from the audio file
         const audioStream = fs.createReadStream(actualPath)
 
-        // Call OpenAI's Whisper API
         const response = await openai.audio.transcriptions.create({
             file: audioStream,
             model: 'whisper-1',
             language: 'es'
         })
 
-        return response.text
+        return response.text !== '' ? response.text : 'No possible transcription.'
     } catch (error) {
         console.error('Error transcribing audio:', error)
         throw error

@@ -10,18 +10,20 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): ReactElement {
 
-  const [transcribedAudio, setTranscribedAudio] = useState<string | null>(null)
-  const [isTranscribing, setIsTranscribing] = useState(false)
 
   const messageContent = message.message?.conversation || message.message?.extendedTextMessage?.text || ''
   const audioMessage = message.message?.audioMessage as AudioMessage
+  const transcribedAudio = audioMessage?.transcribedText
+
 
   const timestamp = message.messageTimestamp
     ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString()
     : ''
 
-  const isRead = message.status === 4 // READ
-  const isDelivered = message.status === 3 // DELIVERY_ACK
+  const isRead = message.status === 4
+  const isDelivered = message.status === 3
+
+  console.log('MESSAGE>>>>>', audioMessage, transcribedAudio)
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -32,36 +34,10 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
           <>
             <audio
               controls
-              src={`app://audio/${message.key.id}.ogg`}
+              src={audioMessage.localPath}
             >
               Your browser does not support the audio element.
             </audio>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                if (isTranscribing) return
-                setIsTranscribing(true)
-                try {
-                  console.log('getting transcript from:', `app://${message.key.id}.ogg`, audioMessage)
-                  const result = await window.electronAPI.transcribeAudio(`app://audio/${message.key.id}.ogg`)
-                  console.log('Transcription:', result)
-                  setTranscribedAudio(result)
-                } catch (error) {
-                  console.error('Error transcribing audio:', error)
-                  alert('Error transcribing audio. Check console for details.')
-                } finally {
-                  setIsTranscribing(false)
-                }
-              }}
-              className={`text-xs ${isTranscribing ? 'animate-pulse' : ''}`}
-              disabled={isTranscribing}
-            >
-              <Mic className={`h-3 w-3 mr-1 ${isTranscribing ? 'animate-pulse' : ''}`} />
-              <p>
-                {isTranscribing ? 'Transcribing...' : 'Transcribe'}
-              </p>
-            </Button>
             {transcribedAudio && (
               <div className="mt-2 text-sm text-gray-200 break-words whitespace-pre-wrap">
                 {transcribedAudio}

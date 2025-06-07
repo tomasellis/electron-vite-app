@@ -72,55 +72,49 @@ export default function ChatInterface(): ReactElement {
     })
     window.electronAPI.onSyncData((data) => {
       setIsLoading(false)
-      // Merge new chats with existing ones
+
       setChats(prevChats => {
         const newChats = [...prevChats]
         data.chats.forEach(newChat => {
           const existingIndex = newChats.findIndex(chat => chat.id === newChat.id)
           if (existingIndex === -1) {
-            // Add new chat if it doesn't exist
             newChats.push(newChat)
           } else {
-            // Update existing chat with new data
             newChats[existingIndex] = { ...newChats[existingIndex], ...newChat }
           }
         })
         return newChats
       })
 
-      // Merge new contacts with existing ones
       setContacts(prevContacts => {
         const newContacts = [...prevContacts]
         data.contacts.forEach(newContact => {
           const existingIndex = newContacts.findIndex(contact => contact.id === newContact.id)
           if (existingIndex === -1) {
-            // Add new contact if it doesn't exist
             newContacts.push(newContact)
           } else {
-            // Update existing contact with new data
             newContacts[existingIndex] = { ...newContacts[existingIndex], ...newContact }
           }
         })
         return newContacts
       })
 
-      // Merge new messages with existing ones
       setMessages(prevMessages => {
+
+        console.log('HISTORY SYNC MESSAGES>>>>>>>>>>')
+        console.log('\n\n\n')
+        console.log({ prevMessages })
         const updatedMessages = { ...prevMessages }
         Object.entries(data.messages).forEach(([chatId, msgs]) => {
           if (!updatedMessages[chatId]) {
-            // If chat doesn't exist, add all messages
             updatedMessages[chatId] = msgs
           } else {
-            // For existing chat, merge messages and remove duplicates
             const uniqueMessages = [...updatedMessages[chatId]]
             msgs.forEach(newMsg => {
               const existingIndex = uniqueMessages.findIndex(msg => msg.key.id === newMsg.key.id)
               if (existingIndex === -1) {
-                // Add new message if it doesn't exist
                 uniqueMessages.push(newMsg)
               } else {
-                // Update existing message with new data
                 uniqueMessages[existingIndex] = { ...uniqueMessages[existingIndex], ...newMsg }
               }
             })
@@ -132,23 +126,23 @@ export default function ChatInterface(): ReactElement {
     })
 
     window.electronAPI.onNewMessages((newMessages) => {
+      console.log('\n\n\n')
+      console.log('NEW MESSAGES ARRIVED>>>>>>>>>>>>>')
+      console.log({ newMessages })
       setMessages(prevMessages => {
         const updatedMessages = { ...prevMessages }
 
         console.log('\n\n')
         console.log('onNewMessages', { prevMessages, newMessages })
         Object.entries(newMessages).forEach(([chatId, msgs]) => {
-          // Ensure we have an array for this chat
           if (!updatedMessages[chatId]) {
             updatedMessages[chatId] = []
           }
-          // Filter out messages that already exist in the array
           const uniqueNewMessages = msgs.filter(newMsg =>
             !updatedMessages[chatId].some(existingMsg =>
               existingMsg.key.id === newMsg.key.id
             )
           )
-          // Prepend new messages to maintain correct order with flex-col-reverse
           updatedMessages[chatId] = [...uniqueNewMessages, ...updatedMessages[chatId]]
         })
         return updatedMessages
@@ -172,11 +166,6 @@ export default function ChatInterface(): ReactElement {
     })
   }, [])
 
-  const handleReloadSync = () => {
-    window.electronAPI.reloadSync()
-  }
-
-  // Add this function to handle chat selection
   const handleChatSelect = (chat: Chat) => {
     setSelectedChat(chat)
     // Update the chat's read status
@@ -269,8 +258,8 @@ export default function ChatInterface(): ReactElement {
   }
 
   useEffect(() => {
-    console.log("loading", chats, messages, contacts)
-  }, [chats, messages, contacts])
+    console.log("loading", messages)
+  }, [messages])
 
   return (
     <div className="flex h-screen bg-[#1a2330] text-white overflow-hidden">

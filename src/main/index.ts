@@ -12,7 +12,11 @@ import { transcribeAudio } from './transcription'
 let win: BrowserWindow
 let sock: null | WASocket
 
-// Register protocol schemes before app is ready
+const APP_DIR = app.getPath('userData')
+const USER_DATA_DIR = path.join(APP_DIR, 'userData')
+const AUDIO_DIR = path.join(USER_DATA_DIR, 'audio')
+const AUTH_DIR = path.join(USER_DATA_DIR, 'auth')
+
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',
@@ -61,7 +65,6 @@ app.whenReady().then(() => {
 
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Add a handler for the transcribe-audio event
   ipcMain.handle('transcribe-audio', async (_, audioPath) => {
     try {
       return await transcribeAudio(audioPath)
@@ -80,13 +83,9 @@ app.whenReady().then(() => {
     const { host, pathname } = new URL(req.url)
 
     if (host === 'audio') {
-      // Base directory for audio files
-      const baseDir = path.join(app.getPath('userData'), 'audio')
+      const baseDir = path.join(app.getPath('userData'), 'userData', 'audio')
 
-      // Resolve the full path
       const fullPath = path.join(baseDir, pathname)
-
-      // Security check: ensure the path is within our audio directory
       const relativePath = path.relative(baseDir, fullPath)
       const isSafe = relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
 
@@ -97,7 +96,6 @@ app.whenReady().then(() => {
         })
       }
 
-      // Check if file exists
       if (!fs.existsSync(fullPath)) {
         return new Response('File not found', {
           status: 404,
@@ -105,7 +103,6 @@ app.whenReady().then(() => {
         })
       }
 
-      // Serve the file
       return net.fetch(pathToFileURL(fullPath).toString())
     }
 
@@ -129,7 +126,7 @@ app.on('window-all-closed', () => {
 })
 
 async function initBaileys() {
-  const { state, saveCreds } = await useMultiFileAuthState('./auth')
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
   const generateQR = async (qr) => {
     try {
       return await QRCode.toDataURL(qr)
@@ -197,8 +194,6 @@ async function initBaileys() {
   })
 
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
-    console.log({ chats, contacts, messages, syncType })
-
     // Filter out chats without names
     const validChats = chats.filter(chat => chat.name)
     const messagesByChat: Record<string, any[]> = {}
@@ -207,91 +202,65 @@ async function initBaileys() {
       messagesByChat[chat.id] = []
     })
 
-    messages.forEach(msg => {
+
+    const messagePromises = messages.map(async msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
-        // Download audio if present
+        console.log('start msg', msg)
         if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
-          downloadAudioMessage(msg).then(audioPath => {
-            if (audioPath && msg.message && msg.message.audioMessage) {
-              msg.message.audioMessage['localPath'] = audioPath
-            }
-          })
+          const audioPath = await downloadAudioMessage(msg)
+          msg.message.audioMessage['localPath'] = audioPath
+          msg.message.audioMessage['transcribedText'] = await transcribeAudio(audioPath)
+
         }
+        console.log('end msg', msg)
         messagesByChat[chatId].push(msg)
       }
     })
 
-    console.log('\nSending history data to renderer:')
-    Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
-      console.log(`\nMessages for chat ${chatId}:`)
-      msgs.forEach(msg => {
-        console.log('Message timestamp:', {
-          raw: msg.messageTimestamp,
-          type: typeof msg.messageTimestamp,
-          parsed: typeof msg.messageTimestamp === 'number'
-            ? new Date(msg.messageTimestamp * 1000).toISOString()
-            : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
-        })
+    Promise.all(messagePromises).then(() => {
+
+      console.log('\n\n')
+      console.log('finished promise', messagesByChat)
+
+      storage.saveChats(validChats)
+      storage.saveContacts(contacts)
+      storage.saveMessages(messagesByChat)
+
+      win.webContents.send('sync-data', {
+        chats: validChats,
+        contacts,
+        messages: messagesByChat
       })
-    })
-
-    storage.saveChats(validChats)
-    storage.saveContacts(contacts)
-    storage.saveMessages(messagesByChat)
-
-    win.webContents.send('sync-data', {
-      chats: validChats,
-      contacts,
-      messages: messagesByChat
     })
   })
 
   sock.ev.on('messages.upsert', async ({ type, messages }) => {
     if (type === 'notify') {
-      console.log('\n\n')
-      console.log('MESSAGES UPSERT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-      console.log({ type, messages })
-
-      // Organize new messages by chat
       const messagesByChat: Record<string, any[]> = {}
 
-      for (const msg of messages) {
+
+      const messagePromises = messages.map(async msg => {
         const chatId = msg.key.remoteJid
         if (chatId) {
-          // Create array for this chat if it doesn't exist
           if (!messagesByChat[chatId]) {
             messagesByChat[chatId] = []
           }
 
-          // Download audio if present
           if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
             const audioPath = await downloadAudioMessage(msg)
             if (audioPath && msg.message && msg.message.audioMessage) {
               msg.message.audioMessage['localPath'] = audioPath
+              msg.message.audioMessage['transcribedText'] = await transcribeAudio(audioPath)
             }
           }
 
-          // Add message to its specific chat array
           messagesByChat[chatId].push(msg)
         }
-      }
-
-      console.log('\nSending new messages to renderer:')
-      Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
-        console.log(`\nMessages for chat ${chatId}:`)
-        msgs.forEach(msg => {
-          console.log('Message timestamp:', {
-            raw: msg.messageTimestamp,
-            type: typeof msg.messageTimestamp,
-            parsed: typeof msg.messageTimestamp === 'number'
-              ? new Date(msg.messageTimestamp * 1000).toISOString()
-              : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
-          })
-        })
       })
 
-      // Update storage with new messages
+      await Promise.all(messagePromises)
+
       const currentMessages = storage.loadMessages()
       Object.entries(messagesByChat).forEach(([chatId, msgs]) => {
         if (!currentMessages[chatId]) {
@@ -308,28 +277,24 @@ async function initBaileys() {
 
 async function downloadAudioMessage(msg: any) {
   try {
-    if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
-      const buffer = await downloadMediaMessage(
-        msg,
-        'buffer',
-        {},
-      )
+    const buffer = await downloadMediaMessage(
+      msg,
+      'buffer',
+      {},
+    )
 
-      const audioDir = path.join(app.getPath('userData'), 'audio')
-      if (!fs.existsSync(audioDir)) {
-        fs.mkdirSync(audioDir, { recursive: true })
-      }
+    const fileName = `${msg.key.id}.ogg`
+    const filePath = path.join(AUDIO_DIR, fileName)
+    fs.writeFileSync(filePath, buffer)
 
-      const fileName = `${msg.key.id}.ogg`
-      const filePath = path.join(audioDir, fileName)
-      fs.writeFileSync(filePath, buffer)
-
-      return `app://audio/${fileName}`
+    if (msg.message && msg.message.audioMessage) {
+      msg.message.audioMessage.localPath = `app://audio/${fileName}`
     }
-    return null
+
+    return `app://audio/${fileName}`
   } catch (error) {
     console.error('Error downloading audio:', error)
-    return null
+    return 'Error'
   }
 }
 

@@ -15,4 +15,7 @@ export interface ChatState {
     activeChatId: string | null
 }
 
-export type AudioMessage = (proto.Message.AudioMessage & { localPath?: string }) | undefined
+export type AudioMessage = (proto.Message.AudioMessage & {
+    localPath?: string;
+    transcribedText?: string;
+}) | undefined
