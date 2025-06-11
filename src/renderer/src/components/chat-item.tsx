@@ -1,12 +1,11 @@
 import { BellOff, User } from 'lucide-react'
 import { Badge } from './ui/badge'
 
-export default function ChatItem({ chat, isSelected, onClick }) {
+export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[rgb(250,250,250,0.1)]' }) {
   return (
     <div
-      className={`flex items-center p-4 hover:bg-gray-800 cursor-pointer border-b border-gray-800 ${
-        isSelected ? 'bg-gray-800' : ''
-      } ${chat.isUnread ? 'bg-opacity-50 bg-gray-900' : ''}`}
+      className={`flex items-center p-4 hover:bg-[rgb(36,38,38)] cursor-pointer border-b border-[rgb(250,250,250,0.1)] ${isSelected ? selectedBg : chat.isUnread ? 'bg-opacity-50 bg-[rgb(250,250,250,0.1)]' : ''
+        }`}
       onClick={onClick}
     >
       <div className="relative mr-3">

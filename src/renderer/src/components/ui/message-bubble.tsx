@@ -17,18 +17,22 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
 
 
   const timestamp = message.messageTimestamp
-    ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString()
+    ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
     : ''
 
   const isRead = message.status === 4
   const isDelivered = message.status === 3
 
   console.log('MESSAGE>>>>>', audioMessage, transcribedAudio)
-
+  const selfMsgBg = "rgb(20,77,55)"
+  const otherMsgBg = "rgb(36,38,38)"
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full ${isOwn ? 'justify-end pr-4' : 'justify-start pl-4'}`}>
       <div
-        className={`rounded-lg p-3 max-w-xs ${isOwn ? 'bg-[#0f8a6d]' : 'bg-gray-700'}`}
+        className='flex-col rounded-lg p-3.5 max-w-xs'
+        style={{
+          backgroundColor: isOwn ? selfMsgBg : otherMsgBg,
+        }}
       >
         {audioMessage ? (
           <>
@@ -49,7 +53,7 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
         )}
         <div className="flex items-center justify-end space-x-1 mt-1">
           <span className="text-xs text-gray-300">{timestamp}</span>
-          {isOwn && (
+          {/* {isOwn && (
             <span className="text-xs text-gray-300">
               {isRead || isDelivered ? (
                 <CheckCheck className="h-3 w-3" />
@@ -57,7 +61,7 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
                 <Check className="h-3 w-3" />
               )}
             </span>
-          )}
+          )} */}
         </div>
       </div>
     </div>

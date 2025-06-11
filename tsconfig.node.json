@@ -4,12 +4,15 @@
     "electron.vite.config.*",
     "src/main/**/*",
     "src/preload/**/*",
-    "src/renderer/src/types.ts"
+    "src/renderer/src/types.ts",
+    "src/renderer/livestore",
+    "src/renderer/env.d.ts"
   ],
   "compilerOptions": {
     "composite": true,
     "types": [
       "electron-vite/node"
-    ]
+    ],
+    "moduleResolution": "bundler"
   }
 }

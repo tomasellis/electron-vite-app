@@ -53,10 +53,14 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
     }
   }
 
+  const borderColor = "rgb(250,250,250,0.1)"
+  const headerBg = "rgb(22,23,23)"
+  const inputBg = "rgb(36,38,38)"
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative" style={{ borderColor }}>
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+      <div className="flex items-center justify-between p-4 border-b crelative z-10" style={{ backgroundColor: headerBg, borderColor }}>
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
             {chat.name?.[0]?.toUpperCase() || chat.id[0]?.toUpperCase()}
@@ -72,42 +76,61 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse">
-
-
-        {messages.map((message) => (
-          <MessageBubble
-            key={`${message.key.id}-${message.key.remoteJid}`}
-            message={message}
-            isOwn={message.key.fromMe ?? false}
-          />
-        ))}
-
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+          className="absolute inset-0 z-0 bg-repeat"
+          style={{
+            backgroundImage: `url("/background2.png")`,
+            backgroundSize: "200px",
+            backgroundRepeat: "repeat",
+            opacity: 0.85,
+          }}
+        />
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse relative z-10"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.1) rgba(22, 23, 23, 1)',
+          }}
+        >
+          <style>
+            {`
+              .flex-1::-webkit-scrollbar {
+                width: 6px;
+              }
+              .flex-1::-webkit-scrollbar-track {
+                background: rgb(22, 23, 23);
+              }
+              .flex-1::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.1);
+                border-radius: 3px;
+              }
+              .flex-1::-webkit-scrollbar-thumb:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+              }
+            `}
+          </style>
+          {messages.map((message) => (
+            <MessageBubble
+              key={`${message.key.id}-${message.key.remoteJid}`}
+              message={message}
+              isOwn={message.key.fromMe ?? false}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Message Input */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center space-x-2">
-          {/* <Button variant="ghost" size="sm"> */}
-          {/*   <Paperclip className="h-4 w-4" /> */}
-          {/* </Button> */}
+      <div className="p-4 relative z-10">
+        <div className="flex items-center space-x-2 pr-2 pl-2">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyUp={handleKeyPress}
             placeholder="Type a message..."
-            className="flex-1 bg-gray-800 border-gray-700"
+            className="flex-1 rounded-3xl py-5 pl-5 border-none"
+            style={{ backgroundColor: inputBg }}
           />
-          {/* <Button variant="ghost" size="sm"> */}
-          {/*   <Smile className="h-4 w-4" /> */}
-          {/* </Button> */}
-          <Button
-            onClick={handleSendMessage}
-            size="sm"
-            className="bg-[#0f8a6d] hover:bg-[#0d7a5e]"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </div>
     </div>

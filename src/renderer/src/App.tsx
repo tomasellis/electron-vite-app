@@ -33,21 +33,122 @@ export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
   const [inboxFilter, setInboxFilter] = useState('all')
-  const [chats, setChats] = useState<Chat[]>([])
+  const [chats, setChats] = useState<Chat[]>([
+    {
+      id: 'fake-chat-1',
+      name: 'Fake George',
+      unreadCount: 1,
+      isSilenced: false,
+      isUnread: true,
+    },
+    {
+      id: 'fake-chat-2',
+      name: 'Person John',
+      unreadCount: 1,
+      isSilenced: false,
+      isUnread: true,
+    }
+  ])
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [messages, setMessages] = useState<Record<string, IncomingMessage[]>>({})
+  const [messages, setMessages] = useState<Record<string, IncomingMessage[]>>({
+    'fake-chat-1': [
+      {
+        key: {
+          remoteJid: 'fake-chat-1',
+          fromMe: true,
+          id: 'msg-1'
+        },
+        message: {
+          conversation: 'Hey George, how are you?'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 3600,
+        status: 2
+      },
+      {
+        key: {
+          remoteJid: 'fake-chat-1',
+          fromMe: false,
+          id: 'msg-2'
+        },
+        message: {
+          conversation: 'I\'m good! Just working on some new projects.'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 3500,
+        status: 2
+      },
+      {
+        key: {
+          remoteJid: 'fake-chat-1',
+          fromMe: true,
+          id: 'msg-3'
+        },
+        message: {
+          conversation: 'That sounds interesting! What kind of projects?'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 3400,
+        status: 2
+      }
+    ].reverse(),
+    'fake-chat-2': [
+      {
+        key: {
+          remoteJid: 'fake-chat-2',
+          fromMe: false,
+          id: 'msg-4'
+        },
+        message: {
+          conversation: 'Hi there! Do you have time for a quick call?'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 1800,
+        status: 2
+      },
+      {
+        key: {
+          remoteJid: 'fake-chat-2',
+          fromMe: true,
+          id: 'msg-5'
+        },
+        message: {
+          conversation: 'Sure, I can talk now. What\'s up?'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 1700,
+        status: 2
+      },
+      {
+        key: {
+          remoteJid: 'fake-chat-2',
+          fromMe: false,
+          id: 'msg-6'
+        },
+        message: {
+          conversation: 'Great! I wanted to discuss the new project timeline.'
+        },
+        messageTimestamp: Math.floor(Date.now() / 1000) - 1600,
+        status: 2
+      }
+    ].reverse()
+  })
 
-  // Filter chats based on active filter
+  const availableFilters = ['inbox', 'unreads', 'silenced']
+
+  const cycleFilter = (direction: 'next' | 'prev') => {
+    const currentIndex = availableFilters.indexOf(activeFilter)
+    const nextIndex = direction === 'next'
+      ? (currentIndex + 1) % availableFilters.length
+      : (currentIndex - 1 + availableFilters.length) % availableFilters.length
+    setActiveFilter(availableFilters[nextIndex])
+  }
+
   const filteredChats = chats.filter((chat) => {
     if (activeFilter === 'unreads') return chat.isUnread
     if (activeFilter === 'silenced') return chat.isSilenced
 
-    // Inbox filters
+
     if (activeFilter === 'inbox') {
       if (inboxFilter === 'all') return true
       if (inboxFilter === 'kungfu') return chat.tag === 'Kungfu'
@@ -182,6 +283,8 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
+        if (filteredChats.length === 0) return
+
         if (!selectedChat) {
           handleChatSelect(filteredChats[0])
           return
@@ -199,6 +302,8 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
+        if (filteredChats.length === 0) return
+
         if (!selectedChat) {
           handleChatSelect(filteredChats[filteredChats.length - 1])
           return
@@ -240,6 +345,18 @@ export default function ChatInterface(): ReactElement {
       action: () => {
         setIsCommandBarOpen(true)
       }
+    },
+    {
+      key: 'h',
+      ctrl: true,
+      meta: false,
+      action: () => cycleFilter('prev')
+    },
+    {
+      key: 'l',
+      ctrl: true,
+      meta: false,
+      action: () => cycleFilter('next')
     }
   ])
 
@@ -261,8 +378,14 @@ export default function ChatInterface(): ReactElement {
     console.log("loading", messages)
   }, [messages])
 
+  const borderColor = "rgb(250,250,250,0.1)"
+  const listBg = "rgb(22,23,23)"
+  const bgColor = "rgb(22,23,23)"
+
   return (
-    <div className="flex h-screen bg-[#1a2330] text-white overflow-hidden">
+    <div className="flex h-screen text-white overflow-hidden" style={{
+      backgroundColor: bgColor
+    }}>
       {!ready && qr ? (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <h2 className="text-2xl mb-4">Scan QR Code to Login</h2>
@@ -276,7 +399,7 @@ export default function ChatInterface(): ReactElement {
       ) : (
         <>
           {/* Left Sidebar */}
-          <div className="w-16 bg-[#1a2330] border-r border-gray-800 flex flex-col items-center py-4 space-y-6 flex-shrink-0">
+          {/* <div className="w-16 bg-[#1a2330] border-r border-gray-800 flex flex-col items-center py-4 space-y-6 flex-shrink-0">
             <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
               <MessageSquare className="h-6 w-6 text-gray-400" />
             </div>
@@ -289,14 +412,17 @@ export default function ChatInterface(): ReactElement {
             <div className="p-2 rounded-md hover:bg-gray-800 cursor-pointer">
               <Settings className="h-6 w-6 text-gray-400" />
             </div>
-          </div>
+          </div> */}
 
           {/* Chat List - 1/3 of screen */}
-          <div className="w-1/3 bg-[#1a2330] border-r border-gray-800 flex flex-col flex-shrink-0">
+          <div className="w-1/3 flex flex-col flex-shrink-0 border-r" style={{
+            backgroundColor: listBg,
+            borderColor
+          }}>
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            <div className="flex items-center justify-between p-4 border-b my-5" style={{ borderColor: borderColor }}>
               <h1 className="text-xl font-bold">Chats</h1>
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <button className="p-1 rounded-md hover:bg-gray-800">
                   <Plus className="h-5 w-5" />
                 </button>
@@ -306,100 +432,43 @@ export default function ChatInterface(): ReactElement {
                 <button className="p-1 rounded-md hover:bg-gray-800">
                   <MoreVertical className="h-5 w-5" />
                 </button>
-              </div>
+              </div> */}
             </div>
 
             {/* Filters */}
-            <div className="flex items-center p-2 space-x-2 border-b border-gray-800">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div
-                    className={`flex items-center space-x-1 ${activeFilter === 'inbox' ? 'bg-[#0f8a6d]' : 'bg-gray-800'} text-white px-3 py-1 rounded-full cursor-pointer`}
-                  >
-                    <span>Inbox{inboxFilter !== 'all' ? `: ${inboxFilter}` : ''}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
-                  <DropdownMenuItem
-                    className="hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setActiveFilter('inbox')
-                      setInboxFilter('all')
-                    }}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>All</span>
-                      {inboxFilter === 'all' && <Check className="h-4 w-4 ml-2" />}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setActiveFilter('inbox')
-                      setInboxFilter('kungfu')
-                    }}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>Kungfu</span>
-                      {inboxFilter === 'kungfu' && <Check className="h-4 w-4 ml-2" />}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setActiveFilter('inbox')
-                      setInboxFilter('friends')
-                    }}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>Friends</span>
-                      {inboxFilter === 'friends' && <Check className="h-4 w-4 ml-2" />}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setActiveFilter('inbox')
-                      setInboxFilter('office')
-                    }}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>Office</span>
-                      {inboxFilter === 'office' && <Check className="h-4 w-4 ml-2" />}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setActiveFilter('inbox')
-                      setInboxFilter('personal')
-                    }}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>Personal</span>
-                      {inboxFilter === 'personal' && <Check className="h-4 w-4 ml-2" />}
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div
+              className="flex items-center p-2 space-x-2 border-b overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-[#1f2937] [&::-webkit-scrollbar-thumb]:bg-[#374151] [&::-webkit-scrollbar-thumb:hover]:bg-[#4b5563]"
+              style={{ borderColor }}
+            >
+              <div
+                className={`px-3 py-1 rounded-full ${activeFilter === 'inbox' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 whitespace-nowrap`}
+                onClick={() => {
+                  setActiveFilter('inbox')
+                  setInboxFilter('all')
+                }}
+              >
+                <span>Inbox</span>
+                <Badge variant="secondary" className={`ml-1 bg-gray-700 text-xs ${chats.length > 0 ? 'text-white' : 'text-gray-500'}`}>
+                  {chats.length}
+                </Badge>
+              </div>
 
               <div
-                className={`px-3 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1`}
+                className={`px-3 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 whitespace-nowrap`}
                 onClick={() => setActiveFilter('unreads')}
               >
                 <span>Unreads</span>
-                <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
+                <Badge variant="secondary" className={`ml-1 bg-gray-700 text-xs ${chats.filter((chat) => chat.isUnread).length > 0 ? 'text-white' : 'text-gray-500'}`}>
                   {chats.filter((chat) => chat.isUnread).length}
                 </Badge>
               </div>
 
               <div
-                className={`px-3 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center`}
+                className={`px-3 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center whitespace-nowrap`}
                 onClick={() => setActiveFilter('silenced')}
               >
                 <span>Silenced</span>
-                <Badge variant="secondary" className="ml-1 bg-gray-700 text-xs">
+                <Badge variant="secondary" className={`ml-1 bg-gray-700 text-xs text-gray-500`}>
                   {chats.filter((chat) => chat.isSilenced).length}
                 </Badge>
               </div>
@@ -414,6 +483,7 @@ export default function ChatInterface(): ReactElement {
                     chat={chat}
                     isSelected={selectedChat?.id === chat.id}
                     onClick={() => handleChatSelect(chat)}
+                    selectedBg="bg-[#0f8a6d]"
                   />
                 ))
               ) : (
@@ -441,7 +511,7 @@ export default function ChatInterface(): ReactElement {
           </div>
 
           {/* Right Panel - Chat or Shortcuts */}
-          <div className="flex-1 bg-[#1a2330] flex flex-col">
+          <div className="flex-1 flex flex-col">
             {selectedChat ? (
               <ChatView
                 chat={selectedChat}
@@ -453,7 +523,6 @@ export default function ChatInterface(): ReactElement {
                     if (!updatedMessages[selectedChat.id]) {
                       updatedMessages[selectedChat.id] = []
                     }
-                    // Add new message at the beginning since we're using flex-col-reverse
                     updatedMessages[selectedChat.id] = [message, ...updatedMessages[selectedChat.id]]
                     return updatedMessages
                   })

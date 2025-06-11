@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
-import { Command, COMMANDS } from '../commands'
+import { COMMANDS } from '../commands'
 
 interface CommandBarProps {
     isOpen: boolean
     onClose: () => void
     onExecute: (command: string) => void
 }
+
+const backgroundColor = "rgb(22,23,23)"
+const borderColor = "rgb(250,250,250,0.1)"
 
 export default function CommandBar({ isOpen, onClose, onExecute }: CommandBarProps) {
     const [input, setInput] = useState('')
@@ -69,11 +71,13 @@ export default function CommandBar({ isOpen, onClose, onExecute }: CommandBarPro
     if (!isOpen) return null
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#1a2330] border-t border-gray-800 p-4">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-[#2d2f34] p-4 z-[50]" style={{
+            backgroundColor, borderColor
+        }}>
             <div className="max-w-2xl mx-auto">
                 <div className="flex flex-col space-y-2">
-                    <div className="flex items-center space-x-2 bg-gray-800 rounded-lg px-3 py-2">
-                        <Search className="h-5 w-5 text-gray-400" />
+                    <div className="flex items-center space-x-2 bg-[#2d2f34] px-3 py-2">
+                        <span className="text-gray-400 font-medium">/</span>
                         <input
                             ref={inputRef}
                             type="text"
@@ -83,17 +87,17 @@ export default function CommandBar({ isOpen, onClose, onExecute }: CommandBarPro
                                 setSelectedIndex(0)
                             }}
                             onKeyDown={handleKeyDown}
-                            placeholder="Type a command..."
+                            placeholder="Type a command or * to list them..."
                             className="bg-transparent border-none outline-none text-white w-full"
                         />
                     </div>
 
                     {input && filteredCommands.length > 0 && (
-                        <div className="bg-gray-800 rounded-lg overflow-hidden">
+                        <div className="bg-[#2d2f34] overflow-hidden">
                             {filteredCommands.map((cmd, index) => (
                                 <div
                                     key={cmd.name}
-                                    className={`px-3 py-2 cursor-pointer ${index === selectedIndex ? 'bg-gray-700' : 'hover:bg-gray-700'
+                                    className={`px-3 py-2 cursor-pointer ${index === selectedIndex ? 'bg-[#36383d]' : 'hover:bg-[#36383d]'
                                         }`}
                                     onClick={() => {
                                         onExecute(cmd.name)
@@ -102,7 +106,7 @@ export default function CommandBar({ isOpen, onClose, onExecute }: CommandBarPro
                                     }}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="font-medium">{cmd.name}</span>
+                                        <span className="font-medium text-white">{cmd.name}</span>
                                         <span className="text-gray-400 text-sm">{cmd.description}</span>
                                     </div>
                                 </div>

@@ -138,7 +138,7 @@ async function initBaileys() {
 
   sock = makeWASocket({
     auth: state,
-    browser: ['WhatsApp Electron', 'Chrome', '1.0.0']
+    browser: ['Vimapp', 'Chrome', '1.0.0']
   })
 
   sock.ev.on('creds.update', () => {
@@ -163,18 +163,7 @@ async function initBaileys() {
 
       if (cachedChats.length > 0 || cachedContacts.length > 0) {
         console.log('\nSending cached data to renderer:')
-        Object.entries(cachedMessages).forEach(([chatId, msgs]) => {
-          console.log(`\nMessages for chat ${chatId}:`)
-          msgs.forEach(msg => {
-            console.log('Message timestamp:', {
-              raw: msg.messageTimestamp,
-              type: typeof msg.messageTimestamp,
-              parsed: typeof msg.messageTimestamp === 'number'
-                ? new Date(msg.messageTimestamp * 1000).toISOString()
-                : new Date((msg.messageTimestamp?.low || 0) * 1000).toISOString()
-            })
-          })
-        })
+
 
         win.webContents.send('sync-data', {
           chats: cachedChats,
@@ -206,14 +195,12 @@ async function initBaileys() {
     const messagePromises = messages.map(async msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
-        console.log('start msg', msg)
         if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
           const audioPath = await downloadAudioMessage(msg)
           msg.message.audioMessage['localPath'] = audioPath
           msg.message.audioMessage['transcribedText'] = await transcribeAudio(audioPath)
 
         }
-        console.log('end msg', msg)
         messagesByChat[chatId].push(msg)
       }
     })
@@ -221,7 +208,7 @@ async function initBaileys() {
     Promise.all(messagePromises).then(() => {
 
       console.log('\n\n')
-      console.log('finished promise', messagesByChat)
+      console.log('finished promise messaging-history')
 
       storage.saveChats(validChats)
       storage.saveContacts(contacts)

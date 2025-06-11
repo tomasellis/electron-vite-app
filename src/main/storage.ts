@@ -36,6 +36,7 @@ const sortMessagesByTimestamp = (messages: IncomingMessage[]): IncomingMessage[]
 
 export const storage = {
     saveChats: (newChats: Chat[]) => {
+
         const existingChats = storage.loadChats()
         const updatedChats = [...existingChats]
 
@@ -93,11 +94,47 @@ export const storage = {
     },
 
     saveMessages: (newMessages: Record<string, IncomingMessage[]>) => {
+        console.log('\n\n\n\n')
+        console.log('SAVING NEW MESSAGES: newMessages')
+        Object.entries(newMessages).forEach(([chatId, msgs]) => {
+            console.log(`\nMessages for chat ${chatId}:`)
+            msgs.forEach(msg => {
+                console.log('Message timestamp:', {
+                    raw: msg.messageTimestamp,
+                    text: msg.message?.conversation
+                })
+            })
+        })
+
+
         const existingMessages = storage.loadMessages()
         const updatedMessages = { ...existingMessages, ...newMessages }
 
 
 
+        console.log('\n\n\n\n')
+        console.log('THESE ARE THE OLD MESSAGES: existingMessages')
+        Object.entries(existingMessages).forEach(([chatId, msgs]) => {
+            console.log(`\nMessages for chat ${chatId}:`)
+            msgs.forEach(msg => {
+                console.log('Message timestamp:', {
+                    raw: msg.messageTimestamp,
+                    text: msg.message?.conversation
+                })
+            })
+        })
+
+        console.log('\n\n\n\n')
+        console.log('SAVING THESE NEW MESSAGES: updatedMessages')
+        Object.entries(updatedMessages).forEach(([chatId, msgs]) => {
+            console.log(`\nMessages for chat ${chatId}:`)
+            msgs.forEach(msg => {
+                console.log('Message timestamp:', {
+                    raw: msg.messageTimestamp,
+                    text: msg.message?.conversation
+                })
+            })
+        })
         fs.writeFileSync(MESSAGES_FILE, JSON.stringify(updatedMessages, null, 2))
     },
 
