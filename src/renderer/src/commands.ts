@@ -16,9 +16,9 @@ interface CommandContext {
 export const COMMANDS: Command[] = [
     {
         name: 'down',
-        description: 'Jump N chats down',
+        description: 'Jump N chats down (default: 1)',
         execute: (args, context) => {
-            const amount = parseInt(args[0])
+            const amount = args[0] ? parseInt(args[0]) : 1
             if (!isNaN(amount) && context.selectedChat) {
                 const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
                 const newIndex = Math.min(currentIndex + amount, context.filteredChats.length - 1)
@@ -28,9 +28,9 @@ export const COMMANDS: Command[] = [
     },
     {
         name: 'up',
-        description: 'Jump N chats up',
+        description: 'Jump N chats up (default: 1)',
         execute: (args, context) => {
-            const amount = parseInt(args[0])
+            const amount = args[0] ? parseInt(args[0]) : 1
             if (!isNaN(amount) && context.selectedChat) {
                 const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
                 const newIndex = Math.max(currentIndex - amount, 0)

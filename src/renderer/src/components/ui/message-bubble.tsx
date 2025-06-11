@@ -17,7 +17,11 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
 
 
   const timestamp = message.messageTimestamp
-    ? new Date((typeof message.messageTimestamp === 'number' ? message.messageTimestamp : message.messageTimestamp.low) * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    ? new Date(Number(message.messageTimestamp) * 1000).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
     : ''
 
   const isRead = message.status === 4

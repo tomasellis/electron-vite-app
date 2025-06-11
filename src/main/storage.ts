@@ -94,47 +94,59 @@ export const storage = {
     },
 
     saveMessages: (newMessages: Record<string, IncomingMessage[]>) => {
-        console.log('\n\n\n\n')
-        console.log('SAVING NEW MESSAGES: newMessages')
-        Object.entries(newMessages).forEach(([chatId, msgs]) => {
-            console.log(`\nMessages for chat ${chatId}:`)
-            msgs.forEach(msg => {
-                console.log('Message timestamp:', {
-                    raw: msg.messageTimestamp,
-                    text: msg.message?.conversation
-                })
-            })
-        })
-
-
         const existingMessages = storage.loadMessages()
-        const updatedMessages = { ...existingMessages, ...newMessages }
+        const updatedMessages = { ...existingMessages }
 
+        Object.entries(newMessages).forEach(([chatId, msgs]) => {
+            if (!updatedMessages[chatId]) {
+                updatedMessages[chatId] = []
+            }
+            // Merge messages, avoiding duplicates by message ID
+            const uniqueMessages = [...updatedMessages[chatId]]
+            msgs.forEach(newMsg => {
+                // Ensure timestamp is a number
+                if (newMsg.messageTimestamp) {
+                    newMsg.messageTimestamp = typeof newMsg.messageTimestamp === 'number'
+                        ? newMsg.messageTimestamp
+                        : newMsg.messageTimestamp.low || 0
+                }
 
+                // Preserve audio message properties
+                if (newMsg.message?.audioMessage) {
+                    const audioMsg = newMsg.message.audioMessage as any
+                    if (audioMsg.localPath) {
+                        newMsg.message.audioMessage = {
+                            ...audioMsg,
+                            localPath: audioMsg.localPath,
+                            transcribedText: audioMsg.transcribedText
+                        } as any
+                    }
+                }
 
-        console.log('\n\n\n\n')
-        console.log('THESE ARE THE OLD MESSAGES: existingMessages')
-        Object.entries(existingMessages).forEach(([chatId, msgs]) => {
-            console.log(`\nMessages for chat ${chatId}:`)
-            msgs.forEach(msg => {
-                console.log('Message timestamp:', {
-                    raw: msg.messageTimestamp,
-                    text: msg.message?.conversation
-                })
+                const existingIndex = uniqueMessages.findIndex(msg => msg.key.id === newMsg.key.id)
+                if (existingIndex === -1) {
+                    uniqueMessages.push(newMsg)
+                } else {
+                    // Preserve audio message properties when updating
+                    if (newMsg.message?.audioMessage) {
+                        const existingAudioMsg = uniqueMessages[existingIndex].message?.audioMessage as any
+                        const newAudioMsg = newMsg.message.audioMessage as any
+                        uniqueMessages[existingIndex].message = {
+                            ...uniqueMessages[existingIndex].message,
+                            audioMessage: {
+                                ...existingAudioMsg,
+                                ...newAudioMsg,
+                                localPath: newAudioMsg.localPath || existingAudioMsg?.localPath,
+                                transcribedText: newAudioMsg.transcribedText || existingAudioMsg?.transcribedText
+                            } as any
+                        }
+                    }
+                    uniqueMessages[existingIndex] = { ...uniqueMessages[existingIndex], ...newMsg }
+                }
             })
+            updatedMessages[chatId] = uniqueMessages
         })
 
-        console.log('\n\n\n\n')
-        console.log('SAVING THESE NEW MESSAGES: updatedMessages')
-        Object.entries(updatedMessages).forEach(([chatId, msgs]) => {
-            console.log(`\nMessages for chat ${chatId}:`)
-            msgs.forEach(msg => {
-                console.log('Message timestamp:', {
-                    raw: msg.messageTimestamp,
-                    text: msg.message?.conversation
-                })
-            })
-        })
         fs.writeFileSync(MESSAGES_FILE, JSON.stringify(updatedMessages, null, 2))
     },
 

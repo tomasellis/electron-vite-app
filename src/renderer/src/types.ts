@@ -1,6 +1,15 @@
 import { Contact as BaileysContact, Chat as BaileysChat, proto } from 'baileys'
 
-export type IncomingMessage = proto.IWebMessageInfo
+export type IncomingMessage = proto.IWebMessageInfo & {
+    message?: {
+        conversation?: string;
+        extendedTextMessage?: {
+            text: string;
+        };
+        audioMessage?: AudioMessage;
+    };
+}
+
 export type Contact = BaileysContact
 export type Chat = BaileysChat & {
     tag?: string

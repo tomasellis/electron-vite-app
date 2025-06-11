@@ -183,8 +183,9 @@ async function initBaileys() {
   })
 
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
-    // Filter out chats without names
-    const validChats = chats.filter(chat => chat.name)
+    // Filter out chats without names, chats with number-only names, and specific blocked number
+    const validChats = chats.filter(chat =>
+      chat.name)
     const messagesByChat: Record<string, any[]> = {}
 
     validChats.forEach(chat => {
@@ -226,9 +227,9 @@ async function initBaileys() {
     if (type === 'notify') {
       const messagesByChat: Record<string, any[]> = {}
 
-
       const messagePromises = messages.map(async msg => {
         const chatId = msg.key.remoteJid
+
         if (chatId) {
           if (!messagesByChat[chatId]) {
             messagesByChat[chatId] = []

@@ -1,24 +1,40 @@
 import { BellOff, User } from 'lucide-react'
 import { Badge } from './ui/badge'
+import { IncomingMessage } from '../types'
 
-export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[rgb(250,250,250,0.1)]' }) {
+interface ChatItemProps {
+  chat: any
+  isSelected: boolean
+  onClick: () => void
+  selectedBg?: string
+  messages?: IncomingMessage[]
+}
+
+export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[rgb(250,250,250,0.1)]', messages = [] }: ChatItemProps) {
+  const lastMessage = messages[0] // Messages are in reverse order
+  const isAudioMessage = lastMessage?.message?.audioMessage
+  const lastMessageContent = isAudioMessage
+    ? '🎵 Audio'
+    : lastMessage?.message?.conversation || ''
+  const lastMessageTime = lastMessage?.messageTimestamp
+    ? new Date(Number(lastMessage.messageTimestamp) * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : ''
+
   return (
     <div
-      className={`flex items-center p-4 hover:bg-[rgb(36,38,38)] cursor-pointer border-b border-[rgb(250,250,250,0.1)] ${isSelected ? selectedBg : chat.isUnread ? 'bg-opacity-50 bg-[rgb(250,250,250,0.1)]' : ''
-        }`}
+      className={`flex items-center p-4 cursor-pointer border-b border-[rgb(250,250,250,0.1)] 
+        ${isSelected ? selectedBg : ''} 
+        ${!isSelected ? 'hover:bg-[#0f8a6d33]' : ''} 
+        ${chat.isUnread ? 'bg-opacity-50 bg-[rgb(250,250,250,0.1)]' : ''}`}
       onClick={onClick}
     >
-      <div className="relative mr-3">
+      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
         <User />
-        {/* <img src={chat.avatar} alt={chat.name} width={40} height={40} className="rounded-full" /> */}
-        {/* {chat.isActive && ( */}
-        {/*   <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#0f8a6d] rounded-full border-2 border-[#1a2330]"></div> */}
-        {/* )} */}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className={`font-medium truncate ${chat.isUnread ? 'font-semibold' : ''}`}>
+            <span className={`font-medium truncate ${isSelected ? 'text-white' : chat.isUnread ? 'font-semibold' : ''}`}>
               {chat.name}
             </span>
             {chat.tag && (
@@ -28,7 +44,6 @@ export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[
                 ${chat.tag === 'Kungfu' ? 'bg-green-600' : ''}
                 ${chat.tag === 'Friends' ? 'bg-green-600' : ''}
                 ${chat.tag === 'Office' ? 'bg-blue-600' : ''}
-                ${chat.tag === 'Personal' ? 'bg-purple-600' : ''}
               `}
               >
                 {chat.tag}
@@ -36,14 +51,12 @@ export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[
             )}
             {chat.isSilenced && <BellOff className="h-3 w-3 text-gray-400" />}
           </div>
-          <span className="text-xs text-gray-400">{chat.time}</span>
+          <span className={`text-xs ${isSelected ? 'text-white' : 'text-gray-400'}`}>{lastMessageTime}</span>
         </div>
         <div className="flex items-center">
-          {chat.hasVoiceMessage && <span className="text-gray-400 mr-1">✓</span>}
-          <p className={`text-sm truncate ${chat.isTyping ? 'text-[#0f8a6d]' : 'text-gray-400'}`}>
-            {chat.message}
+          <p className={`text-sm truncate ${isSelected ? 'text-white' : chat.isTyping ? 'text-[#0f8a6d]' : 'text-gray-400'}`}>
+            {lastMessage?.key?.fromMe ? 'You: ' : ''}{lastMessageContent}
           </p>
-          {chat.isTyping && <div className="ml-1 w-2 h-2 rounded-full bg-[#0f8a6d]"></div>}
         </div>
       </div>
     </div>

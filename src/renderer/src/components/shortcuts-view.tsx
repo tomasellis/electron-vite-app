@@ -3,7 +3,7 @@ import ShortcutSection from './shortcut-section'
 
 export default function ShortcutsView() {
   return (
-    <div className="p-6 overflow-y-auto">
+    <div className="mt-15 p-6 overflow-y-auto">
       <div className="max-w-2xl mx-auto">
         <h2 className="text-3xl font-bold mb-8">Keyboard Shortcuts</h2>
 
@@ -15,7 +15,7 @@ export default function ShortcutsView() {
               <ShortcutItem label="Previous Chat" shortcut="Ctrl + K" />
               <ShortcutItem label="Previous Filter" shortcut="Ctrl + H" />
               <ShortcutItem label="Next Filter" shortcut="Ctrl + L" />
-              <ShortcutItem label="Open Command Bar" shortcut="Ctrl + Shift + :" />
+              <ShortcutItem label="Open Command Bar" shortcut="Ctrl + Shift + M" />
               <ShortcutItem label="Close Chat" shortcut="Esc" />
             </ShortcutSection>
           </div>
@@ -34,6 +34,7 @@ export default function ShortcutsView() {
             <h3 className="text-xl font-semibold mb-4">Filters</h3>
             <ShortcutSection>
               <ShortcutItem label="Mark as Unread" shortcut="Ctrl + T" />
+              <ShortcutItem label="Toggle Silence" shortcut="Ctrl + R" />
               <ShortcutItem label="Inbox" shortcut="filter inbox" />
               <ShortcutItem label="Unreads" shortcut="filter unreads" />
               <ShortcutItem label="Silenced" shortcut="filter silenced" />

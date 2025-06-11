@@ -71,7 +71,7 @@ export default function CommandBar({ isOpen, onClose, onExecute }: CommandBarPro
     if (!isOpen) return null
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-[#2d2f34] p-4 z-[50]" style={{
+        <div className="fixed bottom-0 left-0 right-0 border-t border-[#2d2f34] p-4 z-[9999]" style={{
             backgroundColor, borderColor
         }}>
             <div className="max-w-2xl mx-auto">

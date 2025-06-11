@@ -37,7 +37,6 @@ export default function ChatInterface(): ReactElement {
 
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
-  const [inboxFilter, setInboxFilter] = useState('all')
   const [chats, setChats] = useState<Chat[]>([
     {
       id: 'fake-chat-1',
@@ -147,18 +146,12 @@ export default function ChatInterface(): ReactElement {
   const filteredChats = chats.filter((chat) => {
     if (activeFilter === 'unreads') return chat.isUnread
     if (activeFilter === 'silenced') return chat.isSilenced
-
-
-    if (activeFilter === 'inbox') {
-      if (inboxFilter === 'all') return true
-      if (inboxFilter === 'kungfu') return chat.tag === 'Kungfu'
-      if (inboxFilter === 'friends') return chat.tag === 'Friends'
-      if (inboxFilter === 'office') return chat.tag === 'Office'
-      if (inboxFilter === 'personal') return chat.tag === 'Personal'
-      return true
-    }
-
-    return true
+    return true // inbox shows all chats
+  }).sort((a, b) => {
+    // If both are silenced or both are not silenced, maintain original order
+    if (a.isSilenced === b.isSilenced) return 0
+    // Put silenced chats at the bottom
+    return a.isSilenced ? 1 : -1
   })
 
   useEffect(() => {
@@ -291,8 +284,15 @@ export default function ChatInterface(): ReactElement {
         }
 
         const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+        if (currentIndex === -1) {
+          handleChatSelect(filteredChats[0])
+          return
+        }
 
-        if (currentIndex === filteredChats.length - 1) return handleChatSelect(filteredChats[0])
+        if (currentIndex === filteredChats.length - 1) {
+          handleChatSelect(filteredChats[0])
+          return
+        }
 
         handleChatSelect(filteredChats[currentIndex + 1])
       }
@@ -310,8 +310,15 @@ export default function ChatInterface(): ReactElement {
         }
 
         const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+        if (currentIndex === -1) {
+          handleChatSelect(filteredChats[filteredChats.length - 1])
+          return
+        }
 
-        if (currentIndex === 0) return handleChatSelect(filteredChats[filteredChats.length - 1])
+        if (currentIndex === 0) {
+          handleChatSelect(filteredChats[filteredChats.length - 1])
+          return
+        }
 
         handleChatSelect(filteredChats[currentIndex - 1])
       }
@@ -331,6 +338,20 @@ export default function ChatInterface(): ReactElement {
       }
     },
     {
+      key: 'r',
+      ctrl: true,
+      meta: false,
+      action: () => {
+        if (!selectedChat) return
+
+        setChats(prevChats =>
+          prevChats.map(chat =>
+            chat.id === selectedChat.id ? { ...chat, isSilenced: !chat.isSilenced } : chat
+          )
+        )
+      }
+    },
+    {
       key: 'escape',
       ctrl: false,
       meta: false,
@@ -339,11 +360,11 @@ export default function ChatInterface(): ReactElement {
       }
     },
     {
-      key: ':',
+      key: 'm',
       ctrl: true,
       shift: true,
       action: () => {
-        setIsCommandBarOpen(true)
+        setIsCommandBarOpen(prev => !prev)
       }
     },
     {
@@ -414,8 +435,8 @@ export default function ChatInterface(): ReactElement {
             </div>
           </div> */}
 
-          {/* Chat List - 1/3 of screen */}
-          <div className="w-1/3 flex flex-col flex-shrink-0 border-r" style={{
+          {/* Chat List - Fixed width */}
+          <div className="w-[320px] flex flex-col flex-shrink-0 border-r" style={{
             backgroundColor: listBg,
             borderColor
           }}>
@@ -437,15 +458,12 @@ export default function ChatInterface(): ReactElement {
 
             {/* Filters */}
             <div
-              className="flex items-center p-2 space-x-2 border-b overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-[#1f2937] [&::-webkit-scrollbar-thumb]:bg-[#374151] [&::-webkit-scrollbar-thumb:hover]:bg-[#4b5563]"
+              className="flex items-center p-2 space-x-1 border-b"
               style={{ borderColor }}
             >
               <div
-                className={`px-3 py-1 rounded-full ${activeFilter === 'inbox' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 whitespace-nowrap`}
-                onClick={() => {
-                  setActiveFilter('inbox')
-                  setInboxFilter('all')
-                }}
+                className={`px-2 py-1 rounded-full ${activeFilter === 'inbox' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 flex-shrink-0`}
+                onClick={() => setActiveFilter('inbox')}
               >
                 <span>Inbox</span>
                 <Badge variant="secondary" className={`ml-1 bg-gray-700 text-xs ${chats.length > 0 ? 'text-white' : 'text-gray-500'}`}>
@@ -454,7 +472,7 @@ export default function ChatInterface(): ReactElement {
               </div>
 
               <div
-                className={`px-3 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 whitespace-nowrap`}
+                className={`px-2 py-1 rounded-full ${activeFilter === 'unreads' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 flex-shrink-0`}
                 onClick={() => setActiveFilter('unreads')}
               >
                 <span>Unreads</span>
@@ -464,7 +482,7 @@ export default function ChatInterface(): ReactElement {
               </div>
 
               <div
-                className={`px-3 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center whitespace-nowrap`}
+                className={`px-2 py-1 rounded-full ${activeFilter === 'silenced' ? 'bg-[#0f8a6d] text-white' : 'text-gray-400 hover:bg-gray-800'} cursor-pointer flex items-center space-x-1 flex-shrink-0`}
                 onClick={() => setActiveFilter('silenced')}
               >
                 <span>Silenced</span>
@@ -484,6 +502,7 @@ export default function ChatInterface(): ReactElement {
                     isSelected={selectedChat?.id === chat.id}
                     onClick={() => handleChatSelect(chat)}
                     selectedBg="bg-[#0f8a6d]"
+                    messages={messages[chat.id] || []}
                   />
                 ))
               ) : (
@@ -503,7 +522,7 @@ export default function ChatInterface(): ReactElement {
                       ? "You've read all your messages"
                       : activeFilter === 'silenced'
                         ? 'No silenced conversations'
-                        : `No chats in ${inboxFilter} category`}
+                        : 'No chats in inbox'}
                   </p>
                 </div>
               )}
