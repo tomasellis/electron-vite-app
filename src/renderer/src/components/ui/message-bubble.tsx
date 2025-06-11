@@ -31,7 +31,7 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
   const selfMsgBg = "rgb(20,77,55)"
   const otherMsgBg = "rgb(36,38,38)"
   return (
-    <div className={`flex w-full ${isOwn ? 'justify-end pr-4' : 'justify-start pl-4'}`}>
+    <div className={`flex w-full my-1 ${isOwn ? 'justify-end pr-4' : 'justify-start pl-4'}`}>
       <div
         className='flex-col rounded-lg p-3.5 max-w-xs'
         style={{

@@ -9,6 +9,8 @@ import { pathToFileURL } from 'url'
 import { run } from './transformers'
 import { transcribeAudio } from './transcription'
 
+import 'dotenv/config'
+
 let win: BrowserWindow
 let sock: null | WASocket
 
@@ -185,7 +187,9 @@ async function initBaileys() {
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
     // Filter out chats without names, chats with number-only names, and specific blocked number
     const validChats = chats.filter(chat =>
-      chat.name)
+      chat.name &&
+      chat.id !== process.env.SELF_ID
+    )
     const messagesByChat: Record<string, any[]> = {}
 
     validChats.forEach(chat => {
@@ -196,11 +200,14 @@ async function initBaileys() {
     const messagePromises = messages.map(async msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
+        // Skip messages without text or audio content
+        if (!msg.message?.conversation && !msg.message?.extendedTextMessage?.text && !msg.message?.audioMessage) {
+          return
+        }
         if (msg.message && 'audioMessage' in msg.message && msg.message.audioMessage) {
           const audioPath = await downloadAudioMessage(msg)
           msg.message.audioMessage['localPath'] = audioPath
           msg.message.audioMessage['transcribedText'] = await transcribeAudio(audioPath)
-
         }
         messagesByChat[chatId].push(msg)
       }
@@ -229,8 +236,14 @@ async function initBaileys() {
 
       const messagePromises = messages.map(async msg => {
         const chatId = msg.key.remoteJid
-
+        if (chatId === process.env.SELF_ID) {
+          return
+        }
         if (chatId) {
+          // Skip messages without text or audio content
+          if (!msg.message?.conversation && !msg.message?.extendedTextMessage?.text && !msg.message?.audioMessage) {
+            return
+          }
           if (!messagesByChat[chatId]) {
             messagesByChat[chatId] = []
           }
