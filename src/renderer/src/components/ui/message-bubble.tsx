@@ -90,7 +90,7 @@ export function MessageBubble({ message, isOwn = false }: MessageBubbleProps): R
                       key={index}
                       className={`w-1 rounded-xs transition-colors ${index <= currentBar ? 'bg-green-400' : 'bg-gray-300'}`}
                       style={{
-                        height: `${(value / 255) * 400}%`,
+                        height: `${(value / 255) * 250}%`,
                         minHeight: '4px'
                       }}
                     />
