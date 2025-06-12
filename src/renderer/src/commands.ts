@@ -4,6 +4,7 @@ export interface Command {
     name: string
     description: string
     execute: (args: string[], context: CommandContext) => void
+    shortcut: string[]
 }
 
 interface CommandContext {
@@ -19,46 +20,69 @@ export const COMMANDS: Command[] = [
         description: 'Jump N chats down (default: 1)',
         execute: (args, context) => {
             const amount = args[0] ? parseInt(args[0]) : 1
-            if (!isNaN(amount) && context.selectedChat) {
-                const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
-                const newIndex = Math.min(currentIndex + amount, context.filteredChats.length - 1)
-                context.handleChatSelect(context.filteredChats[newIndex])
+            if (!isNaN(amount)) {
+                if (!context.selectedChat) {
+                    // If no chat is selected, start from the beginning
+                    context.handleChatSelect(context.filteredChats[context.filteredChats.length - 1])
+                } else {
+                    const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
+                    const newIndex = Math.min(currentIndex + amount, context.filteredChats.length - 1)
+                    context.handleChatSelect(context.filteredChats[newIndex])
+                }
             }
-        }
+        },
+        shortcut: ['Ctrl', 'J']
     },
     {
         name: 'up',
         description: 'Jump N chats up (default: 1)',
         execute: (args, context) => {
             const amount = args[0] ? parseInt(args[0]) : 1
-            if (!isNaN(amount) && context.selectedChat) {
-                const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
-                const newIndex = Math.max(currentIndex - amount, 0)
-                context.handleChatSelect(context.filteredChats[newIndex])
+            if (!isNaN(amount)) {
+                if (!context.selectedChat) {
+                    // If no chat is selected, start from the beginning
+                    context.handleChatSelect(context.filteredChats[0])
+                } else {
+                    const currentIndex = context.filteredChats.findIndex((chat) => chat.id === context.selectedChat?.id)
+                    const newIndex = Math.max(currentIndex - amount, 0)
+                    context.handleChatSelect(context.filteredChats[newIndex])
+                }
             }
-        }
+        },
+        shortcut: ['Ctrl', 'K']
     },
     {
-        name: 'search',
-        description: 'Search for a chat by name',
+        name: 'silence',
+        description: 'Toggle silence for the current chat',
         execute: (args, context) => {
-            const searchQuery = args.join(' ').toLowerCase()
-            const foundChat = context.filteredChats.find(chat =>
-                chat.name.toLowerCase().includes(searchQuery)
-            )
-            if (foundChat) {
-                context.handleChatSelect(foundChat)
+            if (context.selectedChat) {
+                const chat = context.filteredChats.find(c => c.id === context.selectedChat?.id)
+                if (chat) {
+                    const currentIndex = context.filteredChats.findIndex(c => c.id === chat.id)
+                    const nextChat = context.filteredChats[currentIndex + 1]
+
+                    if (nextChat) {
+                        context.handleChatSelect(nextChat)
+                    }
+
+                    // Toggle silence status
+                    chat.isSilenced = !chat.isSilenced
+                }
             }
-        }
+        },
+        shortcut: ['Ctrl', 'R']
     },
     {
-        name: 'filter',
-        description: 'Switch between filters (unreads/silenced/inbox)',
+        name: 'unread',
+        description: 'Mark current chat as unread',
         execute: (args, context) => {
-            const filterType = args[0]?.toLowerCase()
-            if (filterType === 'unreads' || filterType === 'silenced' || filterType === 'inbox') {
-                context.setActiveFilter(filterType)
+            if (context.selectedChat) {
+                const chat = context.filteredChats.find(c => c.id === context.selectedChat?.id)
+                if (chat) {
+                    chat.isUnread = true
+                }
             }
-        }
+        },
+        shortcut: ['Ctrl', 'T']
     }
 ] 

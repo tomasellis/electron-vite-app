@@ -1,16 +1,35 @@
 import { BellOff, User } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { IncomingMessage } from '../types'
+import { ReactElement, useRef, useEffect } from 'react'
 
 interface ChatItemProps {
   chat: any
+  contact?: {
+    id: string
+    name?: string
+    notify?: string
+    imgUrl?: string | null
+  }
   isSelected: boolean
-  onClick: () => void
+  onSelect: (chat: any) => void
   selectedBg?: string
   messages?: IncomingMessage[]
 }
 
-export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[rgb(250,250,250,0.1)]', messages = [] }: ChatItemProps) {
+export default function ChatItem({ chat, contact, isSelected, onSelect, selectedBg = 'bg-[rgb(250,250,250,0.1)]', messages = [] }: ChatItemProps): ReactElement {
+  const itemRef = useRef<HTMLDivElement>(null)
+
+  // Scroll into view when selected
+  useEffect(() => {
+    if (isSelected && itemRef.current) {
+      itemRef.current.scrollIntoView({
+        behavior: 'auto',
+        block: 'nearest'
+      })
+    }
+  }, [isSelected])
+
   const lastMessage = messages[0] // Messages are in reverse order
   const isAudioMessage = lastMessage?.message?.audioMessage
   const lastMessageContent = isAudioMessage
@@ -22,14 +41,19 @@ export default function ChatItem({ chat, isSelected, onClick, selectedBg = 'bg-[
 
   return (
     <div
+      ref={itemRef}
       className={`flex items-center p-4 cursor-pointer border-b border-[rgb(250,250,250,0.1)] 
         ${isSelected ? selectedBg : ''} 
         ${!isSelected ? 'hover:bg-[#0f8a6d33]' : ''} 
         ${chat.isUnread ? 'bg-opacity-50 bg-[rgb(250,250,250,0.1)]' : ''}`}
-      onClick={onClick}
+      onClick={() => onSelect(chat)}
     >
-      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-        <User />
+      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3 overflow-hidden">
+        {contact?.imgUrl && contact.imgUrl !== 'changed' ? (
+          <img src={contact.imgUrl} alt={contact.name || chat.name} className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-6 h-6" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">

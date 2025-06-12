@@ -28,6 +28,7 @@ import ShortcutsView from './components/shortcuts-view'
 import ChatItem from './components/chat-item'
 import { Chat, Contact, IncomingMessage } from './types'
 import { COMMANDS } from './commands'
+import { mockContacts, mockChats, generateMockMessages } from './mock-data'
 
 export default function ChatInterface(): ReactElement {
   const [qr, setQR] = useState<string | null>(null)
@@ -35,103 +36,11 @@ export default function ChatInterface(): ReactElement {
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState('inbox')
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: 'fake-chat-1',
-      name: 'Fake George',
-      unreadCount: 1,
-      isSilenced: false,
-      isUnread: true,
-    },
-    {
-      id: 'fake-chat-2',
-      name: 'Person John',
-      unreadCount: 1,
-      isSilenced: false,
-      isUnread: true,
-    }
-  ])
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [messages, setMessages] = useState<Record<string, IncomingMessage[]>>({
-    'fake-chat-1': [
-      {
-        key: {
-          remoteJid: 'fake-chat-1',
-          fromMe: true,
-          id: 'msg-1'
-        },
-        message: {
-          conversation: 'Hey George, how are you?'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 3600,
-        status: 2
-      },
-      {
-        key: {
-          remoteJid: 'fake-chat-1',
-          fromMe: false,
-          id: 'msg-2'
-        },
-        message: {
-          conversation: 'I\'m good! Just working on some new projects.'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 3500,
-        status: 2
-      },
-      {
-        key: {
-          remoteJid: 'fake-chat-1',
-          fromMe: true,
-          id: 'msg-3'
-        },
-        message: {
-          conversation: 'That sounds interesting! What kind of projects?'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 3400,
-        status: 2
-      }
-    ].reverse(),
-    'fake-chat-2': [
-      {
-        key: {
-          remoteJid: 'fake-chat-2',
-          fromMe: false,
-          id: 'msg-4'
-        },
-        message: {
-          conversation: 'Hi there! Do you have time for a quick call?'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 1800,
-        status: 2
-      },
-      {
-        key: {
-          remoteJid: 'fake-chat-2',
-          fromMe: true,
-          id: 'msg-5'
-        },
-        message: {
-          conversation: 'Sure, I can talk now. What\'s up?'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 1700,
-        status: 2
-      },
-      {
-        key: {
-          remoteJid: 'fake-chat-2',
-          fromMe: false,
-          id: 'msg-6'
-        },
-        message: {
-          conversation: 'Great! I wanted to discuss the new project timeline.'
-        },
-        messageTimestamp: Math.floor(Date.now() / 1000) - 1600,
-        status: 2
-      }
-    ].reverse()
-  })
+  const [chats, setChats] = useState<Chat[]>(mockChats)
+  const [contacts, setContacts] = useState<Contact[]>(mockContacts)
+  const [messages, setMessages] = useState<Record<string, IncomingMessage[]>>(generateMockMessages())
 
   const availableFilters = ['inbox', 'unreads', 'silenced']
 
@@ -148,10 +57,19 @@ export default function ChatInterface(): ReactElement {
     if (activeFilter === 'silenced') return chat.isSilenced
     return true // inbox shows all chats
   }).sort((a, b) => {
-    // If both are silenced or both are not silenced, maintain original order
-    if (a.isSilenced === b.isSilenced) return 0
-    // Put silenced chats at the bottom
-    return a.isSilenced ? 1 : -1
+    // First sort by silenced status
+    if (a.isSilenced !== b.isSilenced) {
+      return a.isSilenced ? 1 : -1
+    }
+
+    // Then sort by latest message time
+    const aMessages = messages[a.id] || []
+    const bMessages = messages[b.id] || []
+
+    const aLatestTime = Number(aMessages[0]?.messageTimestamp) || 0
+    const bLatestTime = Number(bMessages[0]?.messageTimestamp) || 0
+
+    return bLatestTime - aLatestTime // Most recent first
   })
 
   useEffect(() => {
@@ -165,6 +83,7 @@ export default function ChatInterface(): ReactElement {
       setReady(true)
     })
     window.electronAPI.onSyncData((data) => {
+      console.log('Received sync data:', data)
       setIsLoading(false)
 
       setChats(prevChats => {
@@ -261,11 +180,26 @@ export default function ChatInterface(): ReactElement {
   }, [])
 
   const handleChatSelect = (chat: Chat) => {
-    setSelectedChat(chat)
+    setSelectedChatId(chat.id)
     // Update the chat's read status
     setChats(prevChats =>
       prevChats.map(c =>
         c.id === chat.id ? { ...c, isUnread: false } : c
+      )
+    )
+  }
+
+  const handleMuteChat = async (chat: any) => {
+    const currentIndex = filteredChats.findIndex(c => c.id === chat.id)
+    const nextChat = filteredChats[currentIndex + 1]
+
+    if (nextChat) {
+      setSelectedChatId(nextChat.id)
+    }
+
+    setChats(prevChats =>
+      prevChats.map(c =>
+        c.id === chat.id ? { ...c, isSilenced: !c.isSilenced } : c
       )
     )
   }
@@ -276,14 +210,15 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
+        if (isCommandBarOpen) return // Don't execute if command bar is open
         if (filteredChats.length === 0) return
 
-        if (!selectedChat) {
+        if (!selectedChatId) {
           handleChatSelect(filteredChats[0])
           return
         }
 
-        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChatId)
         if (currentIndex === -1) {
           handleChatSelect(filteredChats[0])
           return
@@ -302,14 +237,15 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
+        if (isCommandBarOpen) return // Don't execute if command bar is open
         if (filteredChats.length === 0) return
 
-        if (!selectedChat) {
+        if (!selectedChatId) {
           handleChatSelect(filteredChats[filteredChats.length - 1])
           return
         }
 
-        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChat.id)
+        const currentIndex = filteredChats.findIndex((chat) => chat.id === selectedChatId)
         if (currentIndex === -1) {
           handleChatSelect(filteredChats[filteredChats.length - 1])
           return
@@ -328,11 +264,11 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
-        if (!selectedChat) return
+        if (!selectedChatId) return
 
         setChats(prevChats =>
           prevChats.map(chat =>
-            chat.id === selectedChat.id ? { ...chat, isUnread: true } : chat
+            chat.id === selectedChatId ? { ...chat, isUnread: true } : chat
           )
         )
       }
@@ -342,13 +278,12 @@ export default function ChatInterface(): ReactElement {
       ctrl: true,
       meta: false,
       action: () => {
+        if (!selectedChatId) return
+
+        const selectedChat = chats.find(chat => chat.id === selectedChatId)
         if (!selectedChat) return
 
-        setChats(prevChats =>
-          prevChats.map(chat =>
-            chat.id === selectedChat.id ? { ...chat, isSilenced: !chat.isSilenced } : chat
-          )
-        )
+        handleMuteChat(selectedChat)
       }
     },
     {
@@ -356,7 +291,7 @@ export default function ChatInterface(): ReactElement {
       ctrl: false,
       meta: false,
       action: () => {
-        setSelectedChat(null)
+        setSelectedChatId(null)
       }
     },
     {
@@ -387,7 +322,7 @@ export default function ChatInterface(): ReactElement {
 
     if (commandObj) {
       commandObj.execute(args, {
-        selectedChat,
+        selectedChat: selectedChatId ? chats.find(c => c.id === selectedChatId) || null : null,
         filteredChats,
         handleChatSelect,
         setActiveFilter
@@ -436,7 +371,7 @@ export default function ChatInterface(): ReactElement {
           </div> */}
 
           {/* Chat List - Fixed width */}
-          <div className="w-[320px] flex flex-col flex-shrink-0 border-r" style={{
+          <div className="flex flex-col flex-shrink-0 border-r" style={{
             backgroundColor: listBg,
             borderColor
           }}>
@@ -499,9 +434,9 @@ export default function ChatInterface(): ReactElement {
                   <ChatItem
                     key={chat.id}
                     chat={chat}
-                    isSelected={selectedChat?.id === chat.id}
-                    onClick={() => handleChatSelect(chat)}
-                    selectedBg="bg-[#0f8a6d]"
+                    contact={contacts.find(c => c.id === chat.id)}
+                    isSelected={selectedChatId === chat.id}
+                    onSelect={handleChatSelect}
                     messages={messages[chat.id] || []}
                   />
                 ))
@@ -531,18 +466,19 @@ export default function ChatInterface(): ReactElement {
 
           {/* Right Panel - Chat or Shortcuts */}
           <div className="flex-1 flex flex-col">
-            {selectedChat ? (
+            {selectedChatId ? (
               <ChatView
-                chat={selectedChat}
-                messages={messages[selectedChat.id] || []}
-                onClose={() => setSelectedChat(null)}
+                chat={chats.find(c => c.id === selectedChatId)!}
+                contact={contacts.find(c => c.id === selectedChatId)}
+                messages={messages[selectedChatId] || []}
+                onClose={() => setSelectedChatId(null)}
                 onNewMessage={(message) => {
                   setMessages(prevMessages => {
                     const updatedMessages = { ...prevMessages }
-                    if (!updatedMessages[selectedChat.id]) {
-                      updatedMessages[selectedChat.id] = []
+                    if (!updatedMessages[selectedChatId]) {
+                      updatedMessages[selectedChatId] = []
                     }
-                    updatedMessages[selectedChat.id] = [message, ...updatedMessages[selectedChat.id]]
+                    updatedMessages[selectedChatId] = [message, ...updatedMessages[selectedChatId]]
                     return updatedMessages
                   })
                 }}
@@ -557,6 +493,10 @@ export default function ChatInterface(): ReactElement {
             isOpen={isCommandBarOpen}
             onClose={() => setIsCommandBarOpen(false)}
             onExecute={handleCommand}
+            chats={chats}
+            contacts={contacts}
+            messages={messages}
+            onChatSelect={handleChatSelect}
           />
         </>
       )}

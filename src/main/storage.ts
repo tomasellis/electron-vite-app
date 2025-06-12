@@ -101,17 +101,16 @@ export const storage = {
             if (!updatedMessages[chatId]) {
                 updatedMessages[chatId] = []
             }
-            // Merge messages, avoiding duplicates by message ID
+
             const uniqueMessages = [...updatedMessages[chatId]]
             msgs.forEach(newMsg => {
-                // Ensure timestamp is a number
+
                 if (newMsg.messageTimestamp) {
                     newMsg.messageTimestamp = typeof newMsg.messageTimestamp === 'number'
                         ? newMsg.messageTimestamp
                         : newMsg.messageTimestamp.low || 0
                 }
 
-                // Preserve audio message properties
                 if (newMsg.message?.audioMessage) {
                     const audioMsg = newMsg.message.audioMessage as any
                     if (audioMsg.localPath) {

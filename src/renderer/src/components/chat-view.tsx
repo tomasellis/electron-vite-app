@@ -1,4 +1,4 @@
-import { ReactElement, useState } from 'react'
+import { ReactElement, useState, useRef, useEffect } from 'react'
 import { Bell, BellOff, MoreVertical, Paperclip, Send, Smile, User, X, Mic } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -7,14 +7,34 @@ import { Chat, IncomingMessage } from '../types'
 import { MessageBubble } from './ui/message-bubble'
 
 interface ChatViewProps {
-  chat: Chat
+  chat: any
+  contact?: {
+    id: string
+    name?: string
+    notify?: string
+    imgUrl?: string | null
+  }
   messages: IncomingMessage[]
   onClose: () => void
   onNewMessage: (message: IncomingMessage) => void
 }
 
-export default function ChatView({ chat, messages, onClose, onNewMessage }: ChatViewProps): ReactElement {
+export default function ChatView({ chat, contact, messages, onClose, onNewMessage }: ChatViewProps): ReactElement {
   const [message, setMessage] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
+  }
+
+  // Scroll to bottom on initial render and when messages change
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, chat.id]) // Added chat.id to re-scroll when switching chats
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -62,8 +82,14 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b crelative z-10" style={{ backgroundColor: headerBg, borderColor }}>
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-            {chat.name?.[0]?.toUpperCase() || chat.id[0]?.toUpperCase()}
+          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+            {contact?.imgUrl && contact.imgUrl !== 'changed' ? (
+              <img src={contact.imgUrl} alt={contact.name || chat.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg font-semibold">
+                {(contact?.name || chat.name || chat.id)[0]?.toUpperCase()}
+              </span>
+            )}
           </div>
           <div>
             <h2 className="text-lg font-semibold">{chat.name || chat.id}</h2>
@@ -87,29 +113,9 @@ export default function ChatView({ chat, messages, onClose, onNewMessage }: Chat
           }}
         />
         <div
+          ref={messagesContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse relative z-10"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255, 255, 255, 0.1) rgba(22, 23, 23, 1)',
-          }}
         >
-          <style>
-            {`
-              .flex-1::-webkit-scrollbar {
-                width: 6px;
-              }
-              .flex-1::-webkit-scrollbar-track {
-                background: rgb(22, 23, 23);
-              }
-              .flex-1::-webkit-scrollbar-thumb {
-                background-color: rgba(255, 255, 255, 0.1);
-                border-radius: 3px;
-              }
-              .flex-1::-webkit-scrollbar-thumb:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-              }
-            `}
-          </style>
           {messages.map((message) => (
             <MessageBubble
               key={`${message.key.id}-${message.key.remoteJid}`}

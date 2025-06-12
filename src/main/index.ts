@@ -185,6 +185,7 @@ async function initBaileys() {
   })
 
   sock.ev.on('messaging-history.set', ({ chats, contacts, messages, syncType }) => {
+    console.log('Received contacts:', contacts)
     // Filter out chats without names, chats with number-only names, and specific blocked number
     const validChats = chats.filter(chat =>
       chat.name &&
@@ -200,7 +201,6 @@ async function initBaileys() {
     const messagePromises = messages.map(async msg => {
       const chatId = msg.key.remoteJid
       if (chatId && messagesByChat[chatId]) {
-        // Skip messages without text or audio content
         if (!msg.message?.conversation && !msg.message?.extendedTextMessage?.text && !msg.message?.audioMessage) {
           return
         }
